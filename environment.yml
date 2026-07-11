@@ -1,0 +1,19 @@
+name: smart-tabular-embeddings
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy
+  - matplotlib
+  - seaborn
+  - missingno
+  - scikit-learn
+  - jupyter
+  - ipykernel
+  - nbstripout
+  - kaggle
+  - pip
+  - pip:
+      - umap-learn
+      - sentence-transformers
