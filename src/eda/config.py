@@ -17,6 +17,10 @@ AIRBNB_SOURCE_URL = "https://insideairbnb.com/get-the-data/"
 AIRBNB_SCRAPE_DATE = "2026-06-19"  #  Airbnb's landing page has the date of possible last scraping of data
 AIRBNB_DOWNLOAD_DATE = "2026-07-11"  # date the file was manually downloaded and placed in data/raw/airbnb/
 
-DATA_RAW_DIR = Path("data/raw")
+# Anchored to this file's location (not the process cwd), so these resolve
+# correctly regardless of where a notebook kernel or script is launched from.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+DATA_RAW_DIR = REPO_ROOT / "data" / "raw"
 TMDB_RAW_DIR = DATA_RAW_DIR / "tmdb"
 AIRBNB_RAW_DIR = DATA_RAW_DIR / "airbnb"
