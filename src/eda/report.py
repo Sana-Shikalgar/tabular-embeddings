@@ -7,7 +7,10 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-EDA_LOG_PATH = Path("reports/eda_log.md")
+# Anchored to this file's location (not the process cwd), so this resolves
+# correctly regardless of where a notebook kernel or script is launched from.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+EDA_LOG_PATH = REPO_ROOT / "reports" / "eda_log.md"
 
 
 def log_findings(
