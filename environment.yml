@@ -13,6 +13,7 @@ dependencies:
   - pyarrow
   - transformers
   - langdetect
+  - openpyxl
   - jupyter
   - ipykernel
   - nbstripout
