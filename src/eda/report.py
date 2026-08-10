@@ -1,5 +1,6 @@
-"""Append timestamped EDA findings to a single running markdown log
-(reports/eda_log.md) so results accumulate in one place across notebooks.
+"""Output-artifact helpers shared across notebooks: append timestamped EDA
+findings to a single running markdown log (reports/eda_log.md), and save
+figures to reports/figures/ at a consistent resolution.
 """
 
 from __future__ import annotations
@@ -11,6 +12,17 @@ from pathlib import Path
 # correctly regardless of where a notebook kernel or script is launched from.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EDA_LOG_PATH = REPO_ROOT / "reports" / "eda_log.md"
+FIGURES_DIR = REPO_ROOT / "reports" / "figures"
+
+
+def savefig(fig, filename, figures_dir: Path = FIGURES_DIR) -> None:
+    """Saves a matplotlib figure to reports/figures/ at 300dpi, creating the
+    directory if needed."""
+    figures_dir = Path(figures_dir)
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    path = figures_dir / filename
+    fig.savefig(path, dpi=300, bbox_inches="tight")
+    print(f"Saved: {path}")
 
 
 def log_findings(
