@@ -218,3 +218,18 @@ Figures:
 
 ---
 
+## 02 Preprocessing: TMDB candidates -- summary (2026-08-11 18:13)
+
+- **Base cleaned dataset (from 01)**: (1253097, 19)
+- **7 candidate shapes**: {'tmdb_no_nulls': (7535, 19), 'tmdb_budget_revenue_gt0': (11264, 20), 'tmdb_budget_revenue_gt5': (9186, 19), 'tmdb_budget_revenue_gt10': (8870, 19), 'tmdb_no_budget_revenue_gt0': (337742, 17), 'tmdb_no_budget_revenue_gt5': (110389, 18), 'tmdb_no_budget_revenue_gt10': (73898, 17)}
+- **Rows dropped for missing release_date**: {'tmdb_budget_revenue_gt0': 261, 'tmdb_no_budget_revenue_gt5': 80}
+- **Chosen candidates, final shape**: {'tmdb_budget_revenue_gt0': (11003, 20), 'tmdb_no_budget_revenue_gt5': (110309, 18)}
+- **tagline/overview presence (overall)**: {'tmdb_budget_revenue_gt0': '76.4% / 95.6%', 'tmdb_no_budget_revenue_gt5': '39.1% / 97.9%'}
+- **title == original_title (cs/ci)**: {'tmdb_budget_revenue_gt0': '82.2% / 82.4%', 'tmdb_no_budget_revenue_gt5': '65.0% / 65.1%'}
+- **Kruskal-Wallis on release_year by language**: {'tmdb_budget_revenue_gt0': 'H=716.11, p=2.378e-148', 'tmdb_no_budget_revenue_gt5': 'H=1025.86, p=4.57e-215'}
+- **release_date decomposition**: release_year + release_month_sin/cos extracted; release_date and raw release_month then dropped (see Section 5)
+- **Dropped along the way**: tagline, has_overview, vote_count, imdb_id, plus the presence/equality flags used then dropped (see Sections 2, 3, 6, 7)
+- **Saved to**: c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_br_gt0.parquet, c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_nbr_gt5.parquet
+
+---
+
