@@ -233,3 +233,44 @@ Figures:
 
 ---
 
+## 01 Overview & Cleaning: TMDB -- summary (2026-08-12 08:36)
+
+- **TMDB rows (raw -> cleaned)**: 1,456,829 -> 871,113
+- **TMDB columns (raw -> cleaned)**: 24 -> 19
+- **Raw memory footprint (deep)**: 734.2 MB
+- **Dropped: status != 'Released'**: 54,181 rows
+- **Dropped: adult == True**: 527,840 rows
+- **Recoded budget/revenue zeros as NaN**: 93.8% / 98.1% of rows
+- **Recoded runtime zeros as NaN**: 30.5% of rows
+- **Recoded negative runtime/revenue as NaN**: 0.0001% / 0.0001% of rows
+- **Dropped: missing runtime rows**: 384,365
+- **Dropped: duplicate id rows**: 418 (kept most complete row per id)
+- **Dropped: duplicate imdb_id rows**: 2,250 (kept most complete row per imdb_id, tie-broken by lowest id)
+- **Dropped: missing title rows**: 6
+- **Dropped: inconsistent vote_average/vote_count rows**: 1,021
+- **Final missingness (top 3 by %)**: {'revenue': 97.61, 'budget': 92.92, 'tagline': 80.88}
+- **vote_count >= 1 / >= 5 / >= 10**: 291,889 / 121,536 / 77,473 rows (vote_count filter deferred to modeling stage, not yet applied)
+- **Saved to**: c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_clean.parquet
+
+Figures:
+- `reports/figures/01_tmdb_missingness_matrix_cleandata.png`
+- `reports/figures/01_tmdb_vote_average_hist.png`
+
+---
+
+## 02 Preprocessing: TMDB candidates -- summary (2026-08-12 08:37)
+
+- **Base cleaned dataset (from 01)**: (871113, 19)
+- **7 candidate shapes**: {'tmdb_no_nulls': (7535, 19), 'tmdb_budget_revenue_gt0': (10706, 20), 'tmdb_budget_revenue_gt5': (9174, 19), 'tmdb_budget_revenue_gt10': (8863, 19), 'tmdb_no_budget_revenue_gt0': (291889, 17), 'tmdb_no_budget_revenue_gt5': (107830, 18), 'tmdb_no_budget_revenue_gt10': (72869, 17)}
+- **Rows dropped for missing release_date**: {'tmdb_budget_revenue_gt0': 156, 'tmdb_no_budget_revenue_gt5': 48}
+- **Chosen candidates, final shape**: {'tmdb_budget_revenue_gt0': (10550, 20), 'tmdb_no_budget_revenue_gt5': (107782, 18)}
+- **tagline/overview presence (overall)**: {'tmdb_budget_revenue_gt0': '80.3% / 99.7%', 'tmdb_no_budget_revenue_gt5': '39.8% / 99.0%'}
+- **overview missing values**: filled with "" (empty string), not left as NaN (see Section 4)
+- **title == original_title (cs/ci)**: {'tmdb_budget_revenue_gt0': '81.7% / 81.9%', 'tmdb_no_budget_revenue_gt5': '64.6% / 64.8%'}
+- **Kruskal-Wallis on release_year by language**: {'tmdb_budget_revenue_gt0': 'H=429.91, p=5.632e-87', 'tmdb_no_budget_revenue_gt5': 'H=1192.53, p=4.978e-251'}
+- **release_date decomposition**: release_year + release_month_sin/cos extracted; release_date and raw release_month then dropped (see Section 5)
+- **Dropped along the way**: tagline, has_overview, vote_count, imdb_id, plus the presence/equality flags used then dropped (see Sections 2, 3, 6, 7)
+- **Saved to**: c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_br_gt0.parquet, c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_nbr_gt5.parquet
+
+---
+
