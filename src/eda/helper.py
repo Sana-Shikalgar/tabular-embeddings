@@ -15,7 +15,6 @@ import pandas as pd
 from langdetect import LangDetectException, detect
 from scipy import stats
 from sklearn.preprocessing import MultiLabelBinarizer
-from transformers import AutoTokenizer
 
 HTML_RE = re.compile(r"<[^>]+>")
 
@@ -54,13 +53,13 @@ def high_corr_pairs(corr, threshold=0.85):
 
 
 # DECISION POINT: embedding-dimension heuristic — currently Guo & Berkhahn
-# (2016), min(50, cardinality // 2 + 1). If the methodology changes to a
+# (2016), min(100, cardinality // 2 + 1). If the methodology changes to a
 # different heuristic (or a learned/tuned dimension), update here and in the
 # "Entity-embedding dimension heuristic" markdown cell that cites it.
 def entity_embedding_dim(cardinality):
     """Suggests an entity-embedding dimension for a categorical feature from
     its cardinality, using the Guo & Berkhahn (2016) heuristic."""
-    return min(50, (cardinality // 2) + 1)
+    return min(100, (cardinality // 2) + 1)
 
 
 def empty_string_report(df, cols):
@@ -94,9 +93,13 @@ def text_field_report(df, col, label):
 # the model name here so token-length stats reflect the model actually used.
 @lru_cache(maxsize=1)
 def _get_tokenizer():
-    # Lazily initialized (not a module-level global) so importing this module
-    # doesn't trigger a HuggingFace Hub download for every notebook that
-    # imports it, even ones that never call token_length_stats.
+    # Import and initialization both deferred to first call (not a
+    # module-level import/global) so importing this module doesn't pull in
+    # transformers/torch -- and trigger a HuggingFace Hub download -- for
+    # every notebook that imports it, even ones that never call
+    # token_length_stats.
+    from transformers import AutoTokenizer
+
     return AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
 
 
