@@ -7,14 +7,19 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
+import sys
 from functools import lru_cache
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from langdetect import LangDetectException, detect
+from langdetect import LangDetectException, detect_langs
 from scipy import stats
 from sklearn.preprocessing import MultiLabelBinarizer
+
+from src.eda import config
 
 HTML_RE = re.compile(r"<[^>]+>")
 
@@ -87,10 +92,10 @@ def text_field_report(df, col, label):
     return null_count, empty_count
 
 
-# DECISION POINT: embedding model choice — currently
-# sentence-transformers/all-MiniLM-L6-v2 (512-token max sequence length).
-# If the project switches to a different sentence-embedding model, update
-# the model name here so token-length stats reflect the model actually used.
+# DECISION POINT: embedding model choice -- see config.SBERT_MODEL_NAME /
+# config.SBERT_MAX_SEQ_LENGTH. If the project switches to a different
+# sentence-embedding model, update those constants so token-length stats
+# reflect the model actually used.
 @lru_cache(maxsize=1)
 def _get_tokenizer():
     # Import and initialization both deferred to first call (not a
@@ -98,15 +103,27 @@ def _get_tokenizer():
     # transformers/torch -- and trigger a HuggingFace Hub download -- for
     # every notebook that imports it, even ones that never call
     # token_length_stats.
+
+    # On Windows, some Jupyter kernel processes end up with a DLL search
+    # order where another package's same-named DLL shadows one of torch's
+    # own (surfaces as WinError 127 loading torch/lib/shm.dll or a
+    # dependency), even though a plain `python` invocation of the same
+    # environment imports torch fine. Explicitly registering torch's own
+    # lib directory works around that.
+    if hasattr(os, "add_dll_directory"):
+        torch_lib_dir = Path(sys.executable).parent / "Lib" / "site-packages" / "torch" / "lib"
+        if torch_lib_dir.exists():
+            os.add_dll_directory(str(torch_lib_dir))
+
     from transformers import AutoTokenizer
 
-    return AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
+    return AutoTokenizer.from_pretrained(config.SBERT_MODEL_NAME)
 
 
-def token_length_stats(texts, max_len=512, sample_size=5000, random_state=42):
+def token_length_stats(texts, max_len=config.SBERT_MAX_SEQ_LENGTH, sample_size=20000, random_state=42):
     """Estimates the token-length distribution of a text column under the
-    all-MiniLM-L6-v2 tokenizer, from a random sample (tokenizing the full
-    column would be prohibitively slow for the TMDB-sized dataset), and
+    config.SBERT_MODEL_NAME tokenizer, from a random sample (tokenizing the
+    full column would be prohibitively slow for the TMDB-sized dataset), and
     reports the percentage of sampled rows exceeding `max_len` tokens."""
     tokenizer = _get_tokenizer()
     texts = texts.dropna().astype(str)
@@ -120,32 +137,52 @@ def token_length_stats(texts, max_len=512, sample_size=5000, random_state=42):
 
 # DECISION POINT: langdetect is a statistical n-gram method that degrades
 # badly on very short strings and on text dominated by foreign proper nouns
-# (e.g. cast-name lists, short titles) — spot-checking TMDB overview flags
+# (e.g. cast-name lists, short titles) -- spot-checking TMDB overview flags
 # showed ~5/6 flagged rows were false positives for exactly this reason, not
-# genuine non-English text. Currently unfiltered: every flag is treated the
-# same regardless of confidence or text length.
-# TODO: revisit with either (a) langdetect.detect_langs() + a confidence
-# threshold (e.g. >0.9) instead of detect(), or (b) a minimum character-length
-# gate that reports very short text as "too short to classify" rather than
-# confidently (mis)labeling it, if false positives keep being a problem.
-def flag_non_english(series, n=100, random_state=42):
-    """Samples a text column and flags entries `langdetect` identifies as
-    non-English, for manual spot-checking rather than automatic filtering."""
+# genuine non-English text. Below MIN_CHARS_FOR_LANG_DETECTION, no detection
+# is attempted at all ("too_short"); at or above it, detect_langs() gives
+# per-candidate probabilities instead of a single guess, and only a top
+# candidate over LANG_DETECTION_CONFIDENCE is trusted as "non_english" --
+# anything else (low confidence, or a confidently-English top candidate) is
+# "uncertain" rather than being confidently (mis)labeled either way. Same
+# gate and threshold for every field, no per-field tuning.
+MIN_CHARS_FOR_LANG_DETECTION = 40
+LANG_DETECTION_CONFIDENCE = 0.90
+
+
+def flag_non_english(series, n=5000, random_state=42):
+    """Samples a text column and classifies each entry as non_english,
+    too_short (below MIN_CHARS_FOR_LANG_DETECTION, detection not attempted),
+    or uncertain (detection ran but wasn't a confident non-English call),
+    for manual spot-checking rather than automatic filtering."""
     sample = series.dropna().astype(str)
     sample = sample[sample.str.strip() != ""]
     sample = sample.sample(min(n, len(sample)), random_state=random_state)
 
-    def safe_detect(t):
+    def classify(t):
+        if len(t) < MIN_CHARS_FOR_LANG_DETECTION:
+            return "too_short"
         try:
-            return detect(t)
+            top = detect_langs(t.lower())[0]
         except LangDetectException:
-            return "unknown"
+            return "uncertain"
+        if top.lang != "en" and top.prob > LANG_DETECTION_CONFIDENCE:
+            return "non_english"
+        return "uncertain"
 
-    langs = sample.apply(safe_detect)
-    non_english = sample[langs != "en"]
-    pct = float(len(non_english) / len(sample) * 100) if len(sample) else 0.0
-    print(f"{len(non_english)} / {len(sample)} sampled rows ({pct:.1f}%) flagged as non-English")
-    return non_english, pct
+    labels = sample.apply(classify)
+    n_total = len(sample)
+    pct_non_english = float((labels == "non_english").sum() / n_total * 100) if n_total else 0.0
+    pct_too_short = float((labels == "too_short").sum() / n_total * 100) if n_total else 0.0
+    pct_uncertain = float((labels == "uncertain").sum() / n_total * 100) if n_total else 0.0
+
+    print(
+        f"{n_total} sampled rows: {pct_non_english:.1f}% non-English, "
+        f"{pct_too_short:.1f}% too short to classify, {pct_uncertain:.1f}% uncertain"
+    )
+
+    non_english = sample[labels == "non_english"]
+    return non_english, pct_non_english, pct_too_short, pct_uncertain
 
 
 def html_contamination_pct(series):

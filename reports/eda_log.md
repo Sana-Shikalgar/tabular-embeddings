@@ -308,3 +308,150 @@ Figures:
 
 ---
 
+## 00 Characterization: TMDB — summary (2026-08-12 10:10)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 50}
+- **TMDB overview: % > 128 tokens (sampled)**: 0.0%
+- **TMDB overview: % flagged non-English (sampled)**: 5.0%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-12 10:23)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.4%
+- **TMDB overview: % flagged non-English (sampled)**: 5.0%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-12 10:33)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: % flagged non-English (sampled)**: 6.0%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-12 11:00)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: non-English / too short / uncertain (sampled)**: 0.4% / 4.2% / 95.4%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-12 11:16)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: non-English / too short / uncertain (sampled)**: 0.5% / 4.2% / 95.3%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-12 11:26)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: non-English / too short / uncertain (sampled)**: 0.3% / 6.4% / 93.3%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-12 11:36)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: non-English / too short / uncertain (sampled)**: 0.3% / 6.4% / 93.3%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+

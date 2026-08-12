@@ -17,6 +17,12 @@ AIRBNB_SOURCE_URL = "https://insideairbnb.com/get-the-data/"
 AIRBNB_SCRAPE_DATE = "2026-06-19"  #  Airbnb's landing page has the date of possible last scraping of data
 AIRBNB_DOWNLOAD_DATE = "2026-07-11"  # date the file was manually downloaded and placed in data/raw/airbnb/
 
+# Sentence-embedding model used for text features (see src/eda/helper.py's
+# token_length_stats and _get_tokenizer). Multilingual since TMDB overview
+# text spans many original_language values.
+SBERT_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+SBERT_MAX_SEQ_LENGTH = 128
+
 # Anchored to this file's location (not the process cwd), so these resolve
 # correctly regardless of where a notebook kernel or script is launched from.
 REPO_ROOT = Path(__file__).resolve().parents[2]
