@@ -272,5 +272,20 @@ Figures:
 - **Dropped along the way**: tagline, has_overview, vote_count, imdb_id, plus the presence/equality flags used then dropped (see Sections 2, 3, 6, 7)
 - **Saved to**: c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_br_gt0.parquet, c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_nbr_gt5.parquet
 
+
+## 02 Preprocessing: TMDB candidates -- summary (2026-08-12 09:28)
+
+- **Base cleaned dataset (from 01)**: (871113, 19)
+- **7 candidate shapes**: {'tmdb_no_nulls': (7535, 19), 'tmdb_budget_revenue_gt0': (10706, 20), 'tmdb_budget_revenue_gt5': (9174, 19), 'tmdb_budget_revenue_gt10': (8863, 19), 'tmdb_no_budget_revenue_gt0': (291889, 17), 'tmdb_no_budget_revenue_gt5': (107830, 18), 'tmdb_no_budget_revenue_gt10': (72869, 17)}
+- **Rows dropped for missing release_date**: {'tmdb_budget_revenue_gt0': 156, 'tmdb_no_budget_revenue_gt5': 48}
+- **Chosen candidates, final shape**: {'tmdb_budget_revenue_gt0': (10550, 20), 'tmdb_no_budget_revenue_gt5': (107782, 18)}
+- **tagline/overview presence (overall)**: {'tmdb_budget_revenue_gt0': '80.3% / 99.7%', 'tmdb_no_budget_revenue_gt5': '39.8% / 99.0%'}
+- **overview missing values**: filled with "" (empty string), not left as NaN (see Section 4)
+- **title == original_title (cs/ci)**: {'tmdb_budget_revenue_gt0': '81.7% / 81.9%', 'tmdb_no_budget_revenue_gt5': '64.6% / 64.8%'}
+- **Kruskal-Wallis on release_year by language**: {'tmdb_budget_revenue_gt0': 'H=429.91, p=5.632e-87', 'tmdb_no_budget_revenue_gt5': 'H=1192.53, p=4.978e-251'}
+- **release_date decomposition**: release_year + release_month_sin/cos extracted; release_date and raw release_month then dropped (see Section 5)
+- **Dropped along the way**: tagline, has_overview, vote_count, imdb_id, plus the presence/equality flags used then dropped (see Sections 2, 3, 6, 7)
+- **Saved to**: c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_br_gt0.parquet, c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_nbr_gt5.parquet
+
 ---
 
