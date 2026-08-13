@@ -455,3 +455,45 @@ Figures:
 
 ---
 
+## 00 Characterization: TMDB — summary (2026-08-13 11:48)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: non-English / too short / uncertain (sampled)**: 0.3% / 6.4% / 93.3%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-13 13:05)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: non-English / too short / uncertain (sampled)**: 0.3% / 6.4% / 93.3%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
