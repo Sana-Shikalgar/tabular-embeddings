@@ -44,9 +44,9 @@ each stage produces.
 | Stage | Rows | Columns |
 |---|---:|---:|
 | Raw (Kaggle download) | 1,456,829 | 24 |
-| Cleaned (`01_overview_cleaning`) | 871,113 | 19 |
-| Chosen candidate A -- `tmdb_br_gt0` | 10,550 | 20 |
-| Chosen candidate B -- `tmdb_nbr_gt5` | 107,782 | 18 |
+| Cleaned (`01_overview_cleaning`) | 863,858 | 19 |
+| Chosen candidate A -- `tmdb_br_gt0` | 10,504 | 20 |
+| Chosen candidate B -- `tmdb_nbr_gt5` | 107,219 | 18 |
 
 Two candidates come out of `02_preprocessing` and carry through
 `03_feature_split`, differing in how they trade off row count against the
@@ -55,12 +55,12 @@ Two candidates come out of `02_preprocessing` and carry through
 - **`tmdb_br_gt0`** (`tmdb_budget_revenue_gt0`): rows with non-null
   `budget` **and** `revenue`, filtered to `vote_count > 0`. Keeps `budget`
   and `revenue` as features (20 columns), at the cost of a much smaller row
-  count. Split 80/10/10 -> train 8,440 / val 1,055 / test 1,055.
+  count. Split 80/10/10 -> train 8,403 / val 1,050 / test 1,051.
 - **`tmdb_nbr_gt5`** (`tmdb_no_budget_revenue_gt5`): `budget` and `revenue`
   dropped entirely as columns (too sparse to keep -- see `02_preprocessing`
   Section 1), filtered to `vote_count > 5`. 18 columns, roughly 10x the
-  rows of the other candidate. Split 70/15/15 -> train 75,447 / val 16,167
-  / test 16,168.
+  rows of the other candidate. Split 70/15/15 -> train 75,053 / val 16,083
+  / test 16,083.
 
 Both splits are stratified on `original_language`. All six resulting
 train/val/test files are saved to `data/final/`.
@@ -92,7 +92,8 @@ must be run in order:
    cardinality, text/token-length, language detection). Produces no saved
    file; its findings inform the cleaning decisions made in `01`.
 2. **`01_overview_cleaning.ipynb`** -- cleans the raw data (recodes,
-   dedup, drops) -> `data/processed/tmdb_clean.parquet`.
+   dedup, drops, caps and drops) ->
+   `data/processed/tmdb_clean.parquet`.
 3. **`02_preprocessing.ipynb`** -- builds and compares 7 candidate
    variants, refines and selects the two carried forward ->
    `data/processed/tmdb_br_gt0.parquet`, `data/processed/tmdb_nbr_gt5.parquet`.
