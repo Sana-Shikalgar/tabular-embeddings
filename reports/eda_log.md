@@ -721,3 +721,41 @@ Figures:
 
 ---
 
+## 03 Feature Split: TMDB train/val/test -- summary (2026-08-14 08:20)
+
+- **Split sizes (80/10/10)**: {'train': (8403, 20), 'val': (1050, 20), 'test': (1051, 20)}
+- **Split sizes (70/15/15)**: {'train': (75053, 18), 'val': (16083, 18), 'test': (16083, 18)}
+- **Stratified on**: original_language, via a disposable stratify_key that pools languages under 10 total occurrences into 'other' (see Section 1)
+- **Rare-language bucketing (train-derived, min_count=100)**: {'tmdb_budget_revenue_gt0': "5 kept languages + 'other'", 'tmdb_no_budget_revenue_gt5': "35 kept languages + 'other'"}
+- **original_language embedding dim (raw 179 -> post-binning)**: {'raw (00_tmdb_eda.ipynb)': 90, 'tmdb_budget_revenue_gt0': 4, 'tmdb_no_budget_revenue_gt5': 19}
+- **Vocabulary cap (train-derived top 2000 + 'Other')**: {'tmdb_budget_revenue_gt0 / keywords': 'vocab_size=2001, train coverage=66.8%', 'tmdb_budget_revenue_gt0 / production_companies': 'vocab_size=2001, train coverage=69.1%', 'tmdb_no_budget_revenue_gt5 / keywords': 'vocab_size=2001, train coverage=66.0%', 'tmdb_no_budget_revenue_gt5 / production_companies': 'vocab_size=2001, train coverage=47.8%'}
+- **Missing values remaining per split (total cells)**: {'tmdb_br_gt0_train': 0, 'tmdb_br_gt0_val': 0, 'tmdb_br_gt0_test': 0, 'tmdb_nbr_gt5_train': 0, 'tmdb_nbr_gt5_val': 0, 'tmdb_nbr_gt5_test': 0}
+- **Saved to**: {'tmdb_br_gt0_train': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_train.parquet', 'tmdb_br_gt0_val': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_val.parquet', 'tmdb_br_gt0_test': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_test.parquet', 'tmdb_nbr_gt5_train': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_train.parquet', 'tmdb_nbr_gt5_val': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_val.parquet', 'tmdb_nbr_gt5_test': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_test.parquet'}
+
+Figures:
+- `reports/figures/03_tmdb_budget_revenue_gt0_language_coverage.png`
+- `reports/figures/03_tmdb_no_budget_revenue_gt5_language_coverage.png`
+- `reports/figures/03_tmdb_budget_revenue_gt0_vocab_coverage_elbows.png`
+- `reports/figures/03_tmdb_no_budget_revenue_gt5_vocab_coverage_elbows.png`
+
+---
+
+## 03 Feature Split: TMDB train/val/test -- summary (2026-08-14 08:21)
+
+- **Split sizes (80/10/10)**: {'train': (8403, 20), 'val': (1050, 20), 'test': (1051, 20)}
+- **Split sizes (70/15/15)**: {'train': (75053, 18), 'val': (16083, 18), 'test': (16083, 18)}
+- **Stratified on**: original_language, via a disposable stratify_key that pools languages under 10 total occurrences into 'other' (see Section 1)
+- **Rare-language bucketing (train-derived, min_count=100)**: {'tmdb_budget_revenue_gt0': "5 kept languages + 'other'", 'tmdb_no_budget_revenue_gt5': "35 kept languages + 'other'"}
+- **original_language embedding dim (raw 179 -> post-binning)**: {'raw (00_tmdb_eda.ipynb)': 90, 'tmdb_budget_revenue_gt0': 4, 'tmdb_no_budget_revenue_gt5': 19}
+- **Vocabulary cap (train-derived top 2000 + 'Other')**: {'tmdb_budget_revenue_gt0 / keywords': 'vocab_size=2001, train coverage=66.8%', 'tmdb_budget_revenue_gt0 / production_companies': 'vocab_size=2001, train coverage=69.1%', 'tmdb_no_budget_revenue_gt5 / keywords': 'vocab_size=2001, train coverage=66.0%', 'tmdb_no_budget_revenue_gt5 / production_companies': 'vocab_size=2001, train coverage=47.8%'}
+- **Missing values remaining per split (total cells)**: {'tmdb_br_gt0_train': 0, 'tmdb_br_gt0_val': 0, 'tmdb_br_gt0_test': 0, 'tmdb_nbr_gt5_train': 0, 'tmdb_nbr_gt5_val': 0, 'tmdb_nbr_gt5_test': 0}
+- **Saved to**: {'tmdb_br_gt0_train': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_train.parquet', 'tmdb_br_gt0_val': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_val.parquet', 'tmdb_br_gt0_test': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_test.parquet', 'tmdb_nbr_gt5_train': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_train.parquet', 'tmdb_nbr_gt5_val': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_val.parquet', 'tmdb_nbr_gt5_test': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_test.parquet'}
+
+Figures:
+- `reports/figures/03_tmdb_budget_revenue_gt0_language_coverage.png`
+- `reports/figures/03_tmdb_no_budget_revenue_gt5_language_coverage.png`
+- `reports/figures/03_tmdb_budget_revenue_gt0_vocab_coverage_elbows.png`
+- `reports/figures/03_tmdb_no_budget_revenue_gt5_vocab_coverage_elbows.png`
+
+---
+
