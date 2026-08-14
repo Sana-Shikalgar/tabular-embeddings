@@ -759,3 +759,40 @@ Figures:
 
 ---
 
+## 02 Preprocessing: TMDB candidates -- summary (2026-08-14 09:37)
+
+- **Base cleaned dataset (from 01)**: (863858, 19)
+- **7 candidate shapes**: {'tmdb_no_nulls': (7510, 19), 'tmdb_budget_revenue_gt0': (10657, 20), 'tmdb_budget_revenue_gt5': (9148, 19), 'tmdb_budget_revenue_gt10': (8838, 19), 'tmdb_no_budget_revenue_gt0': (289808, 17), 'tmdb_no_budget_revenue_gt5': (107266, 18), 'tmdb_no_budget_revenue_gt10': (72524, 17)}
+- **Rows dropped for missing release_date**: {'tmdb_budget_revenue_gt0': 153, 'tmdb_no_budget_revenue_gt5': 47}
+- **Chosen candidates, final shape**: {'tmdb_budget_revenue_gt0': (10504, 21), 'tmdb_no_budget_revenue_gt5': (107219, 19)}
+- **tagline/overview presence (overall)**: {'tmdb_budget_revenue_gt0': '80.2% / 99.7%', 'tmdb_no_budget_revenue_gt5': '39.9% / 99.0%'}
+- **overview missing values**: filled with "" (empty string), not left as NaN (see Section 4)
+- **title == original_title (cs/ci)**: {'tmdb_budget_revenue_gt0': '81.7% / 81.9%', 'tmdb_no_budget_revenue_gt5': '64.6% / 64.8%'}
+- **title_differs_from_original (retained feature - case-sensitive)**: 18.1% / 35.2%
+- **Kruskal-Wallis on release_year by language**: {'tmdb_budget_revenue_gt0': 'H=435.69, p=3.282e-88', 'tmdb_no_budget_revenue_gt5': 'H=1190.10, p=1.667e-250'}
+- **release_date decomposition**: release_year + release_month_sin/cos extracted; release_date and raw release_month then dropped (see Section 5)
+- **Dropped along the way**: tagline, has_overview, vote_count, imdb_id, plus the tagline/overview presence flags and the cs equality flag (see Sections 2, 3, 6, 7); the ci equality flag is kept, renamed to title_differs_from_original
+- **Log-transformed for skew**: popularity (log1p, both candidates); revenue/budget (log, tmdb_budget_revenue_gt0 only) -- see Section 9 before/after skewness tables
+- **Saved to**: c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_br_gt0.parquet, c:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_nbr_gt5.parquet
+
+---
+
+## 03 Feature Split: TMDB train/val/test -- summary (2026-08-14 09:38)
+
+- **Split sizes (80/10/10)**: {'train': (8403, 21), 'val': (1050, 21), 'test': (1051, 21)}
+- **Split sizes (70/15/15)**: {'train': (75053, 19), 'val': (16083, 19), 'test': (16083, 19)}
+- **Stratified on**: original_language, via a disposable stratify_key that pools languages under 10 total occurrences into 'other' (see Section 1)
+- **Rare-language bucketing (train-derived, min_count=100)**: {'tmdb_budget_revenue_gt0': "5 kept languages + 'other'", 'tmdb_no_budget_revenue_gt5': "35 kept languages + 'other'"}
+- **original_language embedding dim (raw 179 -> post-binning)**: {'raw (00_tmdb_eda.ipynb)': 90, 'tmdb_budget_revenue_gt0': 4, 'tmdb_no_budget_revenue_gt5': 19}
+- **Vocabulary cap (train-derived top 2000 + 'Other')**: {'tmdb_budget_revenue_gt0 / keywords': 'vocab_size=2001, train coverage=66.8%', 'tmdb_budget_revenue_gt0 / production_companies': 'vocab_size=2001, train coverage=69.1%', 'tmdb_no_budget_revenue_gt5 / keywords': 'vocab_size=2001, train coverage=66.0%', 'tmdb_no_budget_revenue_gt5 / production_companies': 'vocab_size=2001, train coverage=47.8%'}
+- **Missing values remaining per split (total cells)**: {'tmdb_br_gt0_train': 0, 'tmdb_br_gt0_val': 0, 'tmdb_br_gt0_test': 0, 'tmdb_nbr_gt5_train': 0, 'tmdb_nbr_gt5_val': 0, 'tmdb_nbr_gt5_test': 0}
+- **Saved to**: {'tmdb_br_gt0_train': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_train.parquet', 'tmdb_br_gt0_val': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_val.parquet', 'tmdb_br_gt0_test': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_br_gt0_test.parquet', 'tmdb_nbr_gt5_train': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_train.parquet', 'tmdb_nbr_gt5_val': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_val.parquet', 'tmdb_nbr_gt5_test': 'c:\\Users\\knowu\\Documents\\Project-Repos\\Dissertation\\smart-tabular-embeddings\\data\\final\\tmdb_nbr_gt5_test.parquet'}
+
+Figures:
+- `reports/figures/03_tmdb_budget_revenue_gt0_language_coverage.png`
+- `reports/figures/03_tmdb_no_budget_revenue_gt5_language_coverage.png`
+- `reports/figures/03_tmdb_budget_revenue_gt0_vocab_coverage_elbows.png`
+- `reports/figures/03_tmdb_no_budget_revenue_gt5_vocab_coverage_elbows.png`
+
+---
+
