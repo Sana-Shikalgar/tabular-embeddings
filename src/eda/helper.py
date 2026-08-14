@@ -19,7 +19,7 @@ from langdetect import LangDetectException, detect_langs
 from scipy import stats
 from sklearn.preprocessing import MultiLabelBinarizer
 
-from src.eda import config
+from src import config
 
 HTML_RE = re.compile(r"<[^>]+>")
 

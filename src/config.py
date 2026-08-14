@@ -25,8 +25,11 @@ SBERT_MAX_SEQ_LENGTH = 128
 
 # Anchored to this file's location (not the process cwd), so these resolve
 # correctly regardless of where a notebook kernel or script is launched from.
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DATA_RAW_DIR = REPO_ROOT / "data" / "raw"
 TMDB_RAW_DIR = DATA_RAW_DIR / "tmdb"
 AIRBNB_RAW_DIR = DATA_RAW_DIR / "airbnb"
+
+PROCESSED_DIR = REPO_ROOT / "data" / "processed"
+FINAL_DIR = REPO_ROOT / "data" / "final"

@@ -796,3 +796,68 @@ Figures:
 
 ---
 
+## 01 Overview & Cleaning: TMDB -- summary (2026-08-14 11:34)
+
+- **TMDB rows (raw -> cleaned)**: 1,456,829 -> 863,858
+- **TMDB columns (raw -> cleaned)**: 24 -> 19
+- **Raw memory footprint (deep)**: 734.2 MB
+- **Dropped: status != 'Released'**: 54,181 rows
+- **Dropped: adult == True**: 535,195 rows
+- **Recoded budget/revenue zeros as NaN**: 93.8% / 98.1% of rows
+- **Recoded runtime zeros as NaN**: 30.5% of rows
+- **Recoded negative runtime/revenue as NaN**: 0.0001% / 0.0001% of rows
+- **Dropped: runtime > 200 minutes rows**: 31.11% of rows dropped (runtime > 200)
+- **Dropped: missing runtime rows**: 0
+- **Dropped: duplicate id rows**: 414 (kept most complete row per id)
+- **Dropped: duplicate imdb_id rows**: 2,158 (kept most complete row per imdb_id, tie-broken by lowest id)
+- **Dropped: missing title rows**: 6
+- **Dropped: inconsistent vote_average/vote_count rows**: 1,017
+- **Final missingness (top 3 by %)**: {'revenue': 97.61, 'budget': 92.9, 'tagline': 80.93}
+- **vote_count >= 1 / >= 5 / >= 10**: 289,808 / 120,883 / 77,101 rows (vote_count filter deferred to modeling stage, not yet applied)
+- **Saved to**: C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_clean.parquet
+
+Figures:
+- `reports/figures/01_tmdb_missingness_matrix_cleandata.png`
+- `reports/figures/01_tmdb_vote_average_hist.png`
+
+---
+
+## 02 Preprocessing: TMDB candidates -- summary (2026-08-14 11:35)
+
+- **Base cleaned dataset (from 01)**: (863858, 19)
+- **7 candidate shapes**: {'tmdb_no_nulls': (7510, 19), 'tmdb_budget_revenue_gt0': (10657, 20), 'tmdb_budget_revenue_gt5': (9148, 19), 'tmdb_budget_revenue_gt10': (8838, 19), 'tmdb_no_budget_revenue_gt0': (289808, 17), 'tmdb_no_budget_revenue_gt5': (107266, 18), 'tmdb_no_budget_revenue_gt10': (72524, 17)}
+- **Rows dropped for missing release_date**: {'tmdb_budget_revenue_gt0': 153, 'tmdb_no_budget_revenue_gt5': 47}
+- **Chosen candidates, final shape**: {'tmdb_budget_revenue_gt0': (10504, 21), 'tmdb_no_budget_revenue_gt5': (107219, 19)}
+- **tagline/overview presence (overall)**: {'tmdb_budget_revenue_gt0': '80.2% / 99.7%', 'tmdb_no_budget_revenue_gt5': '39.9% / 99.0%'}
+- **overview missing values**: filled with "" (empty string), not left as NaN (see Section 4)
+- **title == original_title (cs/ci)**: {'tmdb_budget_revenue_gt0': '81.7% / 81.9%', 'tmdb_no_budget_revenue_gt5': '64.6% / 64.8%'}
+- **title_differs_from_original (retained feature - case-sensitive)**: 18.1% / 35.2%
+- **Kruskal-Wallis on release_year by language**: {'tmdb_budget_revenue_gt0': 'H=435.69, p=3.282e-88', 'tmdb_no_budget_revenue_gt5': 'H=1190.10, p=1.667e-250'}
+- **release_date decomposition**: release_year + release_month_sin/cos extracted; release_date and raw release_month then dropped (see Section 5)
+- **Dropped along the way**: tagline, has_overview, vote_count, imdb_id, plus the tagline/overview presence flags and the cs equality flag (see Sections 2, 3, 6, 7); the ci equality flag is kept, renamed to title_differs_from_original
+- **Log-transformed for skew**: popularity (log1p, both candidates); revenue/budget (log, tmdb_budget_revenue_gt0 only) -- see Section 9 before/after skewness tables
+- **Saved to**: C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_br_gt0.parquet, C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\data\processed\tmdb_nbr_gt5.parquet
+
+---
+
+## 00 Characterization: TMDB — summary (2026-08-14 11:36)
+
+- **TMDB rows (raw -> released, zero-coded)**: 1456829 -> 1401498
+- **TMDB memory footprint (deep)**: 734.2 MB
+- **TMDB most predictive numeric features (|r| with vote_average)**: {'budget': 0.179, 'runtime': 0.169, 'popularity': 0.128}
+- **Entity-embedding dimension table (see notebook Section 3)**: {('TMDB', 'original_language'): 90}
+- **TMDB overview: % > 128 tokens (sampled)**: 12.2%
+- **TMDB overview: non-English / too short / uncertain (sampled)**: 0.3% / 6.4% / 93.3%
+- **TMDB overview: % HTML-contaminated**: 0.01%
+- **TMDB genres vocabulary size**: 19
+- **TMDB keywords vocabulary size**: 68696
+- **Multi-hot vs pooled-embedding recommendation**: genres: multi-hot feasible; keywords: use pooled SBERT-of-item-names if vocab_size > 5000 (see Section 5 warnings above)
+
+Figures:
+- `reports/figures/00_tmdb_vote_average_hist.png`
+- `reports/figures/00_tmdb_boxplots.png`
+- `reports/figures/00_tmdb_correlation_heatmap.png`
+- `reports/figures/00_tmdb_overview_length_hist.png`
+
+---
+
