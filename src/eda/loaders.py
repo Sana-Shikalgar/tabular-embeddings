@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.eda.config import (
+from src.config import (
     AIRBNB_RAW_DIR,
     AIRBNB_SOURCE_URL,
     TMDB_KAGGLE_DATASET,
