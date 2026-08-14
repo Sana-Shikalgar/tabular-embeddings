@@ -33,7 +33,7 @@ class FeatureTargetSplit:
 def build_feature_target_split(
     df: pd.DataFrame,
     target_col: str = "vote_average",
-    id_cols: tuple[str, ...] = ("id",),
+    id_cols: tuple[str, ...] = ("id", "title",),
 ) -> FeatureTargetSplit:
     assert target_col in df.columns, f"target_col {target_col!r} not in df.columns"
     for col in id_cols:
