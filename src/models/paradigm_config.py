@@ -16,6 +16,11 @@ class FTTransformerConfig:
     weight_decay=1e-5 is Table 12's default; the paper documents it as
     0.0 specifically for the feature tokenizer, LayerNorm, and biases,
     not applied uniformly.
+
+    batch_size=256: Gorishniy et al. (2021) use a smaller batch size for
+    all but their two largest datasets (where 1024 is used); 256 matches
+    that regime and this dataset's scale, same uncited-but-consistent
+    treatment as SubTabConfig's svd_variance_threshold.
     """
 
     n_layers: int = 3
@@ -29,6 +34,7 @@ class FTTransformerConfig:
     optimizer: str = "adamw"
     lr: float = 1e-4
     weight_decay: float = 1e-5
+    batch_size: int = 256
 
 
 @dataclass(frozen=True)

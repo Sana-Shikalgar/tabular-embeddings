@@ -41,13 +41,26 @@ class ListFieldPooler:
         return df[self.col].apply(to_indices)
 
     @staticmethod
-    def pool(item_embeddings: np.ndarray, mode: str = "mean") -> np.ndarray:
+    def pool(item_embeddings, mode: str = "mean"):
         if len(item_embeddings) == 0:
             # (1/|S|) * sum(e_i) is 0/0 at |S|=0; a zero vector rather than
             # NaN, so a row with no items doesn't poison whatever this feeds
-            # into downstream.
+            # into downstream. Matches item_embeddings' own type: pool() is
+            # called both on plain np.ndarray and, inside a torch
+            # nn.Module's forward(), on torch.Tensor -- a numpy return in
+            # the latter case would silently break autograd and device
+            # placement when stacked alongside real tensor tokens.
             embedding_dim = item_embeddings.shape[1] if item_embeddings.ndim == 2 else 0
-            return np.zeros(embedding_dim, dtype=np.float32)
+            if isinstance(item_embeddings, np.ndarray):
+                return np.zeros(embedding_dim, dtype=np.float32)
+            # Not np.ndarray -- assume torch.Tensor (NumPy 2.x arrays also
+            # carry a .device attribute now, so that alone can't
+            # distinguish the two; isinstance against np.ndarray can).
+            import torch
+
+            return torch.zeros(
+                embedding_dim, dtype=item_embeddings.dtype, device=item_embeddings.device
+            )
 
         if mode == "mean":
             return item_embeddings.mean(axis=0)
