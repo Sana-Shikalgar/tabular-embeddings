@@ -99,7 +99,10 @@ class FeatureTokenizer(nn.Module):
         for col, start, end in self._bypass_slices:
             tokens.append(self.bypass_tokenizers[col](numeric[:, start:end]))
 
-        lang_idx = torch.from_numpy(batch["original_language"]).long().to(device)
+        # .copy(): CategoricalLookup.transform()'s pandas .map()/.to_numpy() output
+        # is a read-only view under pandas' copy-on-write -- torch.from_numpy would
+        # otherwise wrap that same read-only buffer and warn.
+        lang_idx = torch.from_numpy(batch["original_language"].copy()).long().to(device)
         tokens.append(self.language_embedding(lang_idx))
 
         for field in self.column_groups.list_cols:
