@@ -55,9 +55,21 @@ class SubTabConfig:
     resources" -- AdamW, betas (0.9, 0.999), eps 1e-07; "Learning rate
     of 0.001 is used for all experiments."
 
-    svd_variance_threshold/svd_n_components_ceiling/svd_fields: the rule
-    from Prompt 3.1/3.2, not paper-sourced -- kept here alongside the
-    rest of SubTab's config for one place to look.
+    svd_n_components_ceiling/svd_fields: the rule from Prompt 3.1/3.2, not
+    paper-sourced -- kept here alongside the rest of SubTab's config for
+    one place to look.
+
+    svd_variance_threshold=0.50: 80% is unreachable at a defensible width
+    -- Prompt 3.1's diagnostic (keywords, production_companies, both
+    multi-hot vocabularies of ~2,001 tokens) found only 58.68%/68.77%
+    variance captured at the 300-component ceiling, and by that point
+    marginal gains per additional 30 components had dropped to roughly
+    5-12% of their initial rate -- a flattening curve, not one still
+    climbing toward 80% just short of the ceiling. Reaching 80% would
+    need k close to the field's full vocabulary width, defeating the
+    point of SVD compression over full multi-hot. 50% is adopted as a
+    round, stated retention target consistent with that evidence, not a
+    number chosen for how much room it leaves below the ceiling.
     """
 
     n_subsets: int = 5
@@ -70,7 +82,7 @@ class SubTabConfig:
     optimizer_eps: float = 1e-7
     lr: float = 0.001
     batch_size: int = 256
-    svd_variance_threshold: float = 0.80
+    svd_variance_threshold: float = 0.50
     svd_n_components_ceiling: int = 300
     svd_fields: tuple[str, str] = ("keywords", "production_companies")
 
