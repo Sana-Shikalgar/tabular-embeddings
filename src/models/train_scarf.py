@@ -41,13 +41,19 @@ one shared, patience-based stopping rule across all three paradigms
 rather than each paradigm's own paper-specific number;
 SharedTrainingConfig's own docstring covers the general "why".
 
-Returns (tables, encoder, head, train_losses, val_losses).
+Returns (tables, encoder, head, logger) -- Prompt 5.2's TrainingLogger
+retrofit (train_ft_transformer.py's identical change): the train_losses/
+val_losses lists this function used to return directly are gone; logger is
+a TrainingLogger already .save()'d to artifacts_dir / "models" / "scarf" /
+"diagnostics" / "loss_curve.csv" before this function returns. Read the
+per-epoch values back via logger.to_dataframe().
 """
 
 from __future__ import annotations
 
 import copy
 import itertools
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -62,6 +68,7 @@ from src.models.scarf import (
     build_scarf_views,
     nt_xent_loss,
 )
+from src.models.training_diagnostics import TrainingLogger
 
 
 def _run_batch(
@@ -153,7 +160,8 @@ def train_scarf(
     fitted_encoders: FittedEncoders,
     scarf_config: SCARFConfig,
     shared_config: SharedTrainingConfig,
-) -> tuple[ScarfEmbeddingTables, ScarfEncoder, ScarfProjectionHead, list[float], list[float]]:
+    artifacts_dir: Path,
+) -> tuple[ScarfEmbeddingTables, ScarfEncoder, ScarfProjectionHead, TrainingLogger]:
     rng = np.random.default_rng()
 
     optimizer = torch.optim.Adam(
@@ -161,8 +169,7 @@ def train_scarf(
         lr=scarf_config.lr,
     )
 
-    train_losses: list[float] = []
-    val_losses: list[float] = []
+    logger = TrainingLogger()
     best_val_loss = float("inf")
     best_epoch = 0
     best_state: dict[str, dict] | None = None
@@ -175,8 +182,7 @@ def train_scarf(
         val_loss = _run_validation(
             tables, encoder, head, val_df, fitted_encoders, scarf_config, rng
         )
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
+        logger.log(epoch, train_loss, val_loss)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -196,5 +202,6 @@ def train_scarf(
     encoder.load_state_dict(best_state["encoder"])
     head.load_state_dict(best_state["head"])
     print(f"Restored epoch {best_epoch}'s weights (val NT-Xent: {best_val_loss:.4f})")
+    logger.save(artifacts_dir, "scarf")
 
-    return tables, encoder, head, train_losses, val_losses
+    return tables, encoder, head, logger

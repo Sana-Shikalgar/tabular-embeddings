@@ -35,18 +35,27 @@ segment-MSE values printed at the end are read from val_segment_mse[the
 restored epoch], not val_segment_mse[-1] -- the same "restored, not final"
 bug class train_ft_transformer.py's own val-MSE print was once caught on.
 
-Returns (model, train_losses, val_losses, val_segment_mse) as plain lists/
-dicts. val_segment_mse is one {"keywords_and_production_companies": ...,
-"rest": ...} dict per epoch, same length and index alignment as val_losses
--- per_segment_reconstruction_mse's own return keys ("svd_segments"/"rest")
-are remapped to "keywords_and_production_companies"/"rest" here, since that
-is this function's own return-contract naming, not a second/competing
-definition of the segments themselves.
+Returns (model, logger, val_segment_mse) -- Prompt 5.2's TrainingLogger
+retrofit (train_ft_transformer.py's identical change) replaces the
+train_losses/val_losses lists this function used to return directly with
+one TrainingLogger (already .save()'d to artifacts_dir / "models" /
+"subtab" / "diagnostics" / "loss_curve.csv"), but val_segment_mse is NOT
+folded into the logger -- TrainingLogger only ever tracks (train_loss,
+val_loss), and val_segment_mse is a SubTab-specific diagnostic the logger
+has no schema for, so it stays its own separately-returned list, unchanged
+from before: one {"keywords_and_production_companies": ..., "rest": ...}
+dict per epoch, same length and index alignment as logger's own per-epoch
+records -- per_segment_reconstruction_mse's own return keys
+("svd_segments"/"rest") are remapped to
+"keywords_and_production_companies"/"rest" here, since that is this
+function's own return-contract naming, not a second/competing definition
+of the segments themselves.
 """
 
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -63,6 +72,7 @@ from src.models.subtab import (
     per_segment_reconstruction_mse,
     reconstruction_loss,
 )
+from src.models.training_diagnostics import TrainingLogger
 
 
 def _run_train_epoch(
@@ -144,7 +154,8 @@ def train_subtab(
     list_reducers: dict[str, SubtabListReducer],
     subtab_config: SubTabConfig,
     shared_config: SharedTrainingConfig,
-) -> tuple[SubTabAutoencoder, list[float], list[float], list[dict[str, float]]]:
+    artifacts_dir: Path,
+) -> tuple[SubTabAutoencoder, TrainingLogger, list[dict[str, float]]]:
     train_flat = build_flat_vector(train_df, fitted_encoders, list_reducers)
     val_flat = build_flat_vector(val_df, fitted_encoders, list_reducers)
     full_width = train_flat.shape[1]
@@ -164,8 +175,7 @@ def train_subtab(
         weight_decay=0.0,
     )
 
-    train_losses: list[float] = []
-    val_losses: list[float] = []
+    logger = TrainingLogger()
     val_segment_mse: list[dict[str, float]] = []
     best_val_loss = float("inf")
     best_epoch = 0
@@ -179,8 +189,7 @@ def train_subtab(
         val_loss, val_seg = _run_validation(
             model, val_full, subsets, subtab_config.batch_size, segment_bounds
         )
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
+        logger.log(epoch, train_loss, val_loss)
         val_segment_mse.append(val_seg)
 
         if val_loss < best_val_loss:
@@ -201,5 +210,6 @@ def train_subtab(
         f"{restored_segment_mse['keywords_and_production_companies']:.4f}, "
         f"rest MSE = {restored_segment_mse['rest']:.4f}"
     )
+    logger.save(artifacts_dir, "subtab")
 
-    return model, train_losses, val_losses, val_segment_mse
+    return model, logger, val_segment_mse

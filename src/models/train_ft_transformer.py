@@ -24,13 +24,19 @@ loop ends (whether by early stopping or by exhausting max_epochs), so the
 model returned is always the best-validation-epoch one, never whatever
 epoch training happened to stop at.
 
-Returns (model, train_losses, val_losses) as plain lists. Prompt 5.2 will
-retrofit this into the shared logger -- that wiring is not done here.
+Returns (model, logger): logger is a TrainingLogger (Prompt 5.5) with one
+.log(epoch, train_loss, val_loss) call per epoch actually run, already
+.save()'d to artifacts_dir / "models" / "ft_transformer" / "diagnostics" /
+"loss_curve.csv" before this function returns -- the plain train_losses/
+val_losses lists this function used to return directly are gone; read them
+back via logger.to_dataframe() instead. This is Prompt 5.2's retrofit the
+module docstring above used to say was "not done here."
 """
 
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -41,6 +47,7 @@ import torch.nn.functional as F
 from src.features.pipeline import FittedEncoders
 from src.models.ft_transformer import FTTransformerModel
 from src.models.paradigm_config import FTTransformerConfig, SharedTrainingConfig
+from src.models.training_diagnostics import TrainingLogger
 
 TARGET_COL = "vote_average"
 
@@ -120,7 +127,8 @@ def train_ft_transformer(
     fitted_encoders: FittedEncoders,
     ft_config: FTTransformerConfig,
     shared_config: SharedTrainingConfig,
-) -> tuple[FTTransformerModel, list[float], list[float]]:
+    artifacts_dir: Path,
+) -> tuple[FTTransformerModel, TrainingLogger]:
     train_batch = fitted_encoders.transform(train_df)
     train_target = train_df[TARGET_COL].to_numpy(dtype=np.float32)
     val_batch = fitted_encoders.transform(val_df)
@@ -128,8 +136,7 @@ def train_ft_transformer(
 
     optimizer = _build_optimizer(model, ft_config)
 
-    train_losses: list[float] = []
-    val_losses: list[float] = []
+    logger = TrainingLogger()
     best_val_loss = float("inf")
     best_epoch = 0
     best_state_dict = None
@@ -140,8 +147,7 @@ def train_ft_transformer(
             model, train_batch, train_target, ft_config.batch_size, optimizer
         )
         val_loss = _run_epoch(model, val_batch, val_target, ft_config.batch_size, None)
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
+        logger.log(epoch, train_loss, val_loss)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -155,5 +161,6 @@ def train_ft_transformer(
 
     model.load_state_dict(best_state_dict)
     print(f"Restored epoch {best_epoch}'s weights (val MSE: {best_val_loss:.4f})")
+    logger.save(artifacts_dir, "ft_transformer")
 
-    return model, train_losses, val_losses
+    return model, logger
