@@ -22,3 +22,6 @@ dependencies:
   - pip:
       - umap-learn
       - sentence-transformers
+      - xgboost
+      - shap
+      - lime
