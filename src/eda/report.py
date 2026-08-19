@@ -1,6 +1,20 @@
 """Output-artifact helpers shared across notebooks: append timestamped EDA
 findings to a single running markdown log (reports/eda_log.md), and save
-figures to reports/figures/ at a consistent resolution.
+figures at a consistent resolution.
+
+Each notebook keeps its figures in its own reports/figures/<NN>/
+subdirectory (e.g. reports/figures/00/ for 00_tmdb_eda.ipynb), not a
+shared directory -- savefig's figures_dir has no default for this reason:
+every caller must say which notebook's folder a figure belongs in. The
+usual pattern is to bind that once per notebook, right after import:
+
+    from functools import partial
+    from src.config import FIGURES_DIR
+    FIGURES_DIR = FIGURES_DIR / "00"
+    savefig = partial(savefig, figures_dir=FIGURES_DIR)
+
+so every subsequent savefig(fig, filename) call in that notebook lands in
+the right subdirectory without repeating figures_dir at each call site.
 """
 
 from __future__ import annotations
@@ -8,16 +22,17 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-# Anchored to this file's location (not the process cwd), so this resolves
-# correctly regardless of where a notebook kernel or script is launched from.
-REPO_ROOT = Path(__file__).resolve().parents[2]
-EDA_LOG_PATH = REPO_ROOT / "reports" / "eda_log.md"
-FIGURES_DIR = REPO_ROOT / "reports" / "figures"
+from src.config import REPORTS_DIR
+
+EDA_LOG_PATH = REPORTS_DIR / "eda_log.md"
 
 
-def savefig(fig, filename, figures_dir: Path = FIGURES_DIR) -> None:
-    """Saves a matplotlib figure to reports/figures/ at 300dpi, creating the
-    directory if needed."""
+def savefig(fig, filename, figures_dir: Path) -> None:
+    """Saves a matplotlib figure to figures_dir at 300dpi, creating the
+    directory if needed. figures_dir is required, not defaulted -- see
+    this module's own docstring for the per-notebook subdirectory
+    convention (reports/figures/<NN>/) and the partial-binding pattern
+    that keeps individual call sites from having to repeat it."""
     figures_dir = Path(figures_dir)
     figures_dir.mkdir(parents=True, exist_ok=True)
     path = figures_dir / filename
@@ -36,7 +51,7 @@ def log_findings(
     Args:
         title: Section heading, e.g. "TMDB missingness overview".
         findings: Key findings as a dict; rendered as bullet points.
-        figures: Optional paths (e.g. under reports/figures/) to reference.
+        figures: Optional paths (e.g. under reports/figures/<NN>/) to reference.
         log_path: Log file to append to. Defaults to reports/eda_log.md.
     """
     log_path = Path(log_path)
