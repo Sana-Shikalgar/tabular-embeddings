@@ -44,10 +44,10 @@ class FittedEncoders:
         cls,
         split_dfs: dict[str, pd.DataFrame],
         train_split: FeatureTargetSplit,
-        artifacts_dir: Path,
+        encoder_dir: Path,
     ) -> "FittedEncoders":
         """Loads every fitted encoder and cached SBERT embedding for a
-        candidate from artifacts_dir, keyed by row id, without refitting.
+        candidate from encoder_dir, keyed by row id, without refitting.
         """
         missing_splits = [s for s in SPLITS if s not in split_dfs]
         assert not missing_splits, f"split_dfs missing required splits: {missing_splits}"
@@ -57,8 +57,7 @@ class FittedEncoders:
         )
 
         train_df = split_dfs["train"]
-        artifacts_dir = Path(artifacts_dir)
-        encoders_dir = artifacts_dir / "encoders"
+        encoders_dir  = Path(encoder_dir)
 
         column_groups = build_column_groups(train_df, train_split)
 
@@ -178,22 +177,22 @@ class FittedEncoders:
         return result
 
 
-    def save(self, artifacts_dir: Path) -> None:
+    def save(self, encoder_dir: Path) -> None:
         """Saves every sub-encoder and a dims/corruption_eligible_cols
-        manifest to artifacts_dir/encoders/. Does not re-save the SBERT
+        manifest to encoder_dir/. Does not re-save the SBERT
         .npy arrays, which fit() reads directly from that directory.
         """
-        artifacts_dir = Path(artifacts_dir)
+        encoder_dir = Path(encoder_dir)
 
-        save_json(self.standardizer, "standardizer.json", artifacts_dir)
-        save_json(self.ple, "ple.json", artifacts_dir)
+        save_json(self.standardizer, "standardizer.json", encoder_dir)
+        save_json(self.ple, "ple.json", encoder_dir)
         save_json(
-            self.language_lookup, "categorical_lookup_original_language.json", artifacts_dir
+            self.language_lookup, "categorical_lookup_original_language.json", encoder_dir
         )
         for field, pooler in self.list_poolers.items():
-            save_json(pooler, f"list_pooler_{field}.json", artifacts_dir)
+            save_json(pooler, f"list_pooler_{field}.json", encoder_dir)
 
-        encoders_dir = artifacts_dir / "encoders"
+        encoders_dir = encoder_dir
         encoders_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = encoders_dir / "manifest.json"
         with open(manifest_path, "w") as f:

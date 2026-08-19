@@ -39,7 +39,11 @@ FIGURES_DIR = REPORTS_DIR / "figures"
 ACTIVE_CANDIDATE = "br_gt0"
 # ACTIVE_CANDIDATE = "nbr_gt5"
 
-ARTIFACTS_DIR = REPO_ROOT / "data" / "artifacts" / ACTIVE_CANDIDATE
+ENCODER_DIR = REPO_ROOT / "data" / "encoders" / ACTIVE_CANDIDATE
+
+# Saved raw/classical/ft_transformer/subtab/scarf representations, one
+# subfolder per candidate so runs for br_gt0 and nbr_gt5 never collide.
+MODELS_DIR = REPO_ROOT / "models" / ACTIVE_CANDIDATE
 
 # 03_feature_split.ipynb's rare-language counts are verified in 04_feature_encoding.ipynb 
 # against CategoricalLookup's vocab size, keyed by candidate name for accuracy.
