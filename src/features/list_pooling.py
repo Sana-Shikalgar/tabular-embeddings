@@ -37,14 +37,23 @@ class ListFieldPooler:
         return df[self.col].apply(to_indices)
 
     @staticmethod
-    def pool(item_embeddings: np.ndarray, mode: str = "mean") -> np.ndarray:
-        """Mean- or sum-pools a row's item embeddings; an empty set pools to zeros."""
+    def pool(item_embeddings, mode: str = "mean"):
+        """Mean- or sum-pools a row's item embeddings; an empty set pools to
+        zeros. Accepts either a numpy array or a torch tensor, and returns
+        the same type back -- callers (e.g. FeatureTokenizer, stacking one
+        pooled row per call) need every row's result to be the same type,
+        not just the non-empty ones."""
         if len(item_embeddings) == 0:
             # (1/|S|) * sum(e_i) is 0/0 at |S|=0; a zero vector rather than
             # NaN, so a row with no items doesn't poison whatever this feeds
             # into downstream.
             embedding_dim = item_embeddings.shape[1] if item_embeddings.ndim == 2 else 0
-            return np.zeros(embedding_dim, dtype=np.float32)
+            if isinstance(item_embeddings, np.ndarray):
+                return np.zeros(embedding_dim, dtype=np.float32)
+            import torch
+            return torch.zeros(
+                embedding_dim, dtype=item_embeddings.dtype, device=item_embeddings.device
+            )
 
         if mode == "mean":
             return item_embeddings.mean(axis=0)
