@@ -32,7 +32,7 @@ def _run_train_epoch(
     subsets: list[torch.Tensor],
     batch_size: int,
     optimizer: torch.optim.Optimizer,
-    rng: np.random.Generator = np.random.default_rng(config.RANDOM_SEED),
+    rng: np.random.Generator,
 ) -> float:
     """One shuffled pass (via rng) over train_full, updating model on each
     subset's reconstruction loss. Returns the row-count-weighted mean L_r
@@ -108,12 +108,13 @@ def train_subtab(
     subtab_config: SubTabConfig,
     shared_config: SharedTrainingConfig,
     models_dir: Path,
-    rng: np.random.Generator = np.random.default_rng(config.RANDOM_SEED),
+    seed: int = config.RANDOM_SEED,
 ) -> tuple[SubTabAutoencoder, TrainingLogger, list[dict[str, float]]]:
     """Trains model against train_df/val_df, early-stopping on validation
     L_r, restores the best-validation-epoch weights, and saves the
     training curve via TrainingLogger. Returns
     (model, logger, val_segment_mse)."""
+    rng = np.random.default_rng(seed)
     train_flat = build_flat_vector(train_df, fitted_encoders, list_reducers)
     val_flat = build_flat_vector(val_df, fitted_encoders, list_reducers)
     full_width = train_flat.shape[1]

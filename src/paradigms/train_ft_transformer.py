@@ -61,7 +61,7 @@ def _run_epoch(
     target: np.ndarray,
     batch_size: int,
     optimizer: torch.optim.Optimizer | None,
-    rng: np.random.Generator = np.random.default_rng(config.RANDOM_SEED),
+    rng: np.random.Generator,
 ) -> float:
     """One pass over batch/target in batch_size chunks. Shuffles row order
     (via rng) and updates weights when optimizer is given (training);
@@ -103,11 +103,12 @@ def train_ft_transformer(
     ft_config: FTTransformerConfig,
     shared_config: SharedTrainingConfig,
     models_dir: Path,
-    rng: np.random.Generator = np.random.default_rng(config.RANDOM_SEED),
+    seed: int = config.RANDOM_SEED,
 ) -> tuple[FTTransformerModel, TrainingLogger]:
     """Trains model against train_df/val_df, early-stopping on validation
     MSE, restores the best-validation-epoch weights, and saves the
     training curve via TrainingLogger. Returns (model, logger)."""
+    rng = np.random.default_rng(seed)
     train_batch = fitted_encoders.transform(train_df)
     train_target = train_df[TARGET_COL].to_numpy(dtype=np.float32)
     val_batch = fitted_encoders.transform(val_df)
