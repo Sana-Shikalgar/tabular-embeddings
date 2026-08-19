@@ -33,9 +33,11 @@ for how to obtain the dataset locally.
 
 ## What's in This Branch
 
-A TMDB-only data pipeline, in four notebooks: characterizing the raw
-dataset, cleaning it, constructing and comparing candidate feature sets, and
-producing two final train/val/test splits. See "Notebook Run Order" below
+A TMDB-only data pipeline, in five notebooks: characterizing the raw
+dataset, cleaning it, constructing and comparing candidate feature sets,
+producing two final train/val/test splits, and encoding those splits into
+the shared per-type feature representations and baselines that later
+embedding-paradigm notebooks build on. See "Notebook Run Order" below
 for how the notebooks depend on each other, and "Dataset Shapes" for what
 each stage produces.
 
@@ -101,15 +103,30 @@ must be run in order:
    `data/processed/tmdb_br_gt0.parquet`, `data/processed/tmdb_nbr_gt5.parquet`.
 4. **`03_feature_split.ipynb`** -- stratified train/val/test split, rare-
    language and vocabulary bucketing -> the six files in `data/final/`.
+5. **`04_feature_encoding.ipynb`** -- fits the shared per-type encoders
+   (numeric standardisation + piecewise-linear binning, categorical
+   lookup, list-field pooling, frozen SBERT text encoding) on whichever
+   candidate is active in `src/config.py`, and builds the raw/classical
+   baselines -> encoders under `data/encoders/<candidate>/`, baseline
+   parquet files under `models/<candidate>/`.
 
-Each notebook also logs a timestamped summary to `reports/eda_log.md`.
+Notebooks `00`-`03` log a timestamped summary to `reports/eda_log.md`;
+`04` logs to its own `reports/feature_encoding_log.md`.
 
-## Shared Code (`src/eda/`)
+## Shared Code
 
-Every notebook's Setup cell imports from `src/eda/` rather than
-duplicating logic: `loaders.py` (dataset loading), `helper.py` (EDA/
-cleaning helper functions), `report.py` (figure saving and the
-`reports/eda_log.md` logger), and `config.py` (shared constants).
+Every notebook's Setup cell imports from shared modules rather than
+duplicating logic:
+
+- **`src/eda/`** -- `loaders.py` (dataset loading) and `helper.py` (EDA/
+  cleaning helper functions), used by notebooks `00`-`03`.
+- **`src/report.py`** -- figure saving and the timestamped markdown-log
+  helper, used by every notebook (each passes its own log file).
+- **`src/config.py`** -- constants shared across every notebook and
+  module (paths, the active candidate, the random seed, split names).
+- **`src/features/`** -- the per-type encoder classes and the
+  `FittedEncoders` bundle that `04_feature_encoding.ipynb` fits and saves,
+  for reuse by later embedding-paradigm notebooks.
 
 ## Development Notes
 
