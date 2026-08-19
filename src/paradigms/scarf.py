@@ -27,20 +27,12 @@ from src.paradigms.paradigm_config import SCARFConfig
 DEFAULT_E_DIM = FTTransformerConfig().d_token
 
 
-def corrupt_dataframe(
-    df: pd.DataFrame,
-    fitted_encoders: FittedEncoders,
-    p: float,
-    rng: np.random.Generator,
-    eligible_group_keys: list[str] | None = None,
-) -> pd.DataFrame:
-    """Corrupts df by replacing a Bernoulli(p)-selected subset of each
-    eligible column's values with values resampled from that column's own
-    empirical distribution, independently per column. Returns a corrupted
-    copy; df is never mutated."""
-    if eligible_group_keys is None:
-        eligible_group_keys = fitted_encoders.corruption_eligible_cols
-
+def expand_group_keys_to_raw_cols(
+    fitted_encoders: FittedEncoders, eligible_group_keys: list[str]
+) -> list[str]:
+    """Expands corruption_eligible_cols-style group keys ("numeric",
+    "original_language", or a list-field key) to the underlying raw df
+    column name(s) each one covers."""
     raw_cols: list[str] = []
     for key in eligible_group_keys:
         if key == "numeric":
@@ -52,9 +44,31 @@ def corrupt_dataframe(
             raw_cols.append(fitted_encoders.list_poolers[key].col)
         else:
             raise ValueError(
-                f"corrupt_dataframe: don't know how to expand "
+                f"expand_group_keys_to_raw_cols: don't know how to expand "
                 f"eligible_group_keys entry {key!r} to a raw df column"
             )
+    return raw_cols
+
+
+def corrupt_dataframe(
+    df: pd.DataFrame,
+    fitted_encoders: FittedEncoders,
+    p: float,
+    rng: np.random.Generator,
+    eligible_group_keys: list[str] | None = None,
+    marginals: dict[str, np.ndarray] | None = None,
+) -> pd.DataFrame:
+    """Corrupts df by replacing a Bernoulli(p)-selected subset of each
+    eligible column's values with values resampled from that column's
+    empirical distribution, independently per column. marginals, when
+    given, supplies each column's resample source instead of df's own
+    values (e.g. a fixed train-set distribution reused across batches);
+    when None, df's own column values are used, unchanged from before.
+    Returns a corrupted copy; df is never mutated."""
+    if eligible_group_keys is None:
+        eligible_group_keys = fitted_encoders.corruption_eligible_cols
+
+    raw_cols = expand_group_keys_to_raw_cols(fitted_encoders, eligible_group_keys)
 
     corrupted = df.copy()
     n_rows = len(df)
@@ -62,7 +76,7 @@ def corrupt_dataframe(
         mask = rng.random(n_rows) < p
         if not mask.any():
             continue
-        source_values = df[col].to_numpy()
+        source_values = marginals[col] if marginals is not None else df[col].to_numpy()
         sampled = rng.choice(source_values, size=int(mask.sum()), replace=True)
         col_values = corrupted[col].to_numpy(copy=True)
         col_values[mask] = sampled
@@ -147,12 +161,14 @@ def build_scarf_views(
     tables: ScarfEmbeddingTables,
     p: float,
     rng: np.random.Generator,
+    marginals: dict[str, np.ndarray] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Builds SCARF's (clean, corrupted) view pair for one batch: corrupts
-    a copy of df, transforms both the original and corrupted copies, and
-    flattens each into SCARF's input vector via the same shared-weight
-    tables."""
-    corrupted_df = corrupt_dataframe(df, fitted_encoders, p, rng)
+    a copy of df (drawing each column's replacement values from marginals
+    when given, otherwise from df itself), transforms both the original
+    and corrupted copies, and flattens each into SCARF's input vector via
+    the same shared-weight tables."""
+    corrupted_df = corrupt_dataframe(df, fitted_encoders, p, rng, marginals=marginals)
 
     clean_transformed = fitted_encoders.transform(df)
     corrupted_transformed = fitted_encoders.transform(corrupted_df)

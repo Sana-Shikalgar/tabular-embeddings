@@ -20,6 +20,7 @@ from src.paradigms.scarf import (
     ScarfEncoder,
     ScarfProjectionHead,
     build_scarf_views,
+    expand_group_keys_to_raw_cols,
     nt_xent_loss,
 )
 from src.paradigms.training_diagnostics import TrainingLogger
@@ -33,11 +34,13 @@ def _run_batch(
     fitted_encoders: FittedEncoders,
     scarf_config: SCARFConfig,
     rng: np.random.Generator,
+    marginals: dict[str, np.ndarray] | None = None,
 ) -> torch.Tensor:
-    """Builds one batch's clean/corrupted views and returns their NT-Xent
-    loss."""
+    """Builds one batch's clean/corrupted views (resampling corrupted
+    values from marginals when given, otherwise from batch_df itself) and
+    returns their NT-Xent loss."""
     clean_vec, corrupted_vec = build_scarf_views(
-        batch_df, fitted_encoders, tables, scarf_config.corruption_rate, rng
+        batch_df, fitted_encoders, tables, scarf_config.corruption_rate, rng, marginals=marginals
     )
     z_clean = head(encoder(clean_vec))
     z_corrupted = head(encoder(corrupted_vec))
@@ -53,6 +56,7 @@ def _run_train_epoch(
     scarf_config: SCARFConfig,
     rng: np.random.Generator,
     optimizer: torch.optim.Optimizer,
+    marginals: dict[str, np.ndarray] | None = None,
 ) -> float:
     """One shuffled pass (via rng) over train_df, updating tables/encoder/
     head on each batch's loss. Returns the row-count-weighted mean
@@ -69,7 +73,9 @@ def _run_train_epoch(
         batch_df = train_df.iloc[idx]
 
         optimizer.zero_grad()
-        loss = _run_batch(tables, encoder, head, batch_df, fitted_encoders, scarf_config, rng)
+        loss = _run_batch(
+            tables, encoder, head, batch_df, fitted_encoders, scarf_config, rng, marginals=marginals
+        )
         loss.backward()
         optimizer.step()
 
@@ -87,6 +93,7 @@ def _run_validation(
     fitted_encoders: FittedEncoders,
     scarf_config: SCARFConfig,
     rng: np.random.Generator,
+    marginals: dict[str, np.ndarray] | None = None,
 ) -> float:
     """Fixed-order pass over val_df, computing NT-Xent loss without
     gradient updates. Returns the row-count-weighted mean loss across
@@ -100,7 +107,9 @@ def _run_validation(
     with torch.no_grad():
         for start in range(0, n_rows, scarf_config.batch_size):
             batch_df = val_df.iloc[start : start + scarf_config.batch_size]
-            loss = _run_batch(tables, encoder, head, batch_df, fitted_encoders, scarf_config, rng)
+            loss = _run_batch(
+                tables, encoder, head, batch_df, fitted_encoders, scarf_config, rng, marginals=marginals
+            )
 
             total_loss += loss.item() * len(batch_df)
             total_rows += len(batch_df)
@@ -126,6 +135,13 @@ def train_scarf(
     (tables, encoder, head, logger)."""
     rng = np.random.default_rng(seed)
 
+    # Fixed once from train_df, before the epoch loop -- every batch, every
+    # epoch, every corrupted value is resampled from this same train-set
+    # marginal distribution, never rebuilt from whatever batch is being
+    # corrupted (which would leak that batch's own values back into itself).
+    raw_cols = expand_group_keys_to_raw_cols(fitted_encoders, fitted_encoders.corruption_eligible_cols)
+    marginals = {col: train_df[col].to_numpy() for col in raw_cols}
+
     optimizer = torch.optim.Adam(
         itertools.chain(tables.parameters(), encoder.parameters(), head.parameters()),
         lr=scarf_config.lr,
@@ -139,10 +155,12 @@ def train_scarf(
 
     for epoch in range(1, shared_config.max_epochs + 1):
         train_loss = _run_train_epoch(
-            tables, encoder, head, train_df, fitted_encoders, scarf_config, rng, optimizer
+            tables, encoder, head, train_df, fitted_encoders, scarf_config, rng, optimizer,
+            marginals=marginals,
         )
         val_loss = _run_validation(
-            tables, encoder, head, val_df, fitted_encoders, scarf_config, rng
+            tables, encoder, head, val_df, fitted_encoders, scarf_config, rng,
+            marginals=marginals,
         )
         logger.log(epoch, train_loss, val_loss)
 
