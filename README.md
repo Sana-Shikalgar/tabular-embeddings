@@ -124,6 +124,9 @@ duplicating logic:
   helper, used by every notebook (each passes its own log file).
 - **`src/config.py`** -- constants shared across every notebook and
   module (paths, the active candidate, the random seed, split names).
+- **`src/helper.py`** -- JSON save/load for fitted encoders, plus the
+  id-first-column convention for saved representation parquet files;
+  used by `04_feature_encoding.ipynb` and `src/features/pipeline.py`.
 - **`src/features/`** -- the per-type encoder classes and the
   `FittedEncoders` bundle that `04_feature_encoding.ipynb` fits and saves,
   for reuse by later embedding-paradigm notebooks.

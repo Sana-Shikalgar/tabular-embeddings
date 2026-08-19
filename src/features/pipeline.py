@@ -13,7 +13,7 @@ import pandas as pd
 
 from src.config import SPLIT_NAMES
 from src.features.categorical import CategoricalLookup
-from src.features.helper import load_json, save_json
+from src.helper import load_json, save_json
 from src.features.list_pooling import ListFieldPooler
 from src.features.numeric_embeddings import PiecewiseLinearEncoder
 from src.features.standardize import Standardizer
