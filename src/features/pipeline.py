@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.config import SPLIT_NAMES
 from src.features.categorical import CategoricalLookup
 from src.features.helper import load_json, save_json
 from src.features.list_pooling import ListFieldPooler
@@ -19,7 +20,6 @@ from src.features.standardize import Standardizer
 from src.features.target_split import ColumnGroups, FeatureTargetSplit, build_column_groups
 
 TEXT_FIELDS = ("overview", "original_title")
-SPLITS = ("train", "val", "test")
 ID_COL = "id"
 
 
@@ -49,7 +49,7 @@ class FittedEncoders:
         """Loads every fitted encoder and cached SBERT embedding for a
         candidate from encoder_dir, keyed by row id, without refitting.
         """
-        missing_splits = [s for s in SPLITS if s not in split_dfs]
+        missing_splits = [s for s in SPLIT_NAMES if s not in split_dfs]
         assert not missing_splits, f"split_dfs missing required splits: {missing_splits}"
         assert ID_COL in train_split.id_cols, (
             f"{ID_COL!r} not in train_split.id_cols={train_split.id_cols}; "
@@ -74,7 +74,7 @@ class FittedEncoders:
         text_cache: dict[str, dict[int, np.ndarray]] = {}
         for field in TEXT_FIELDS:
             field_cache: dict[int, np.ndarray] = {}
-            for split_name in SPLITS:
+            for split_name in SPLIT_NAMES:
                 path = encoders_dir / f"{field}_embeddings_{split_name}.npy"
                 if not path.exists():
                     raise FileNotFoundError(

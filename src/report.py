@@ -1,6 +1,6 @@
-"""Output-artifact helpers shared across notebooks: append timestamped EDA
-findings to a single running markdown log (reports/eda_log.md), and save
-figures at a consistent resolution.
+"""Output-artifact helpers shared across notebooks: append timestamped
+findings to a running markdown log (any reports/*.md file, e.g.
+reports/eda_log.md), and save figures at a consistent resolution.
 
 Each notebook keeps its figures in its own reports/figures/<NN>/
 subdirectory (e.g. reports/figures/00/ for 00_tmdb_eda.ipynb), not a
@@ -45,14 +45,18 @@ def log_findings(
     findings: dict,
     figures: list[str] | None = None,
     log_path: Path = EDA_LOG_PATH,
+    log_title: str = "EDA Log",
 ) -> None:
-    """Append a timestamped section to the EDA log.
+    """Append a timestamped section to a markdown log.
 
     Args:
         title: Section heading, e.g. "TMDB missingness overview".
         findings: Key findings as a dict; rendered as bullet points.
         figures: Optional paths (e.g. under reports/figures/<NN>/) to reference.
         log_path: Log file to append to. Defaults to reports/eda_log.md.
+        log_title: Top-level heading written once, only when log_path is
+            created for the first time. Defaults to "EDA Log"; pass a
+            different title for any other reports/*.md log file.
     """
     log_path = Path(log_path)
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -76,5 +80,5 @@ def log_findings(
     is_new = not log_path.exists()
     with log_path.open("a", encoding="utf-8") as f:
         if is_new:
-            f.write("# EDA Log\n\n")
+            f.write(f"# {log_title}\n\n")
         f.write("\n".join(lines) + "\n")

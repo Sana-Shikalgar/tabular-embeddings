@@ -18,8 +18,12 @@ TMDB_DOWNLOAD_DATE = "2026-07-11"  # date this dataset was first downloaded via 
 SBERT_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 SBERT_MAX_SEQ_LENGTH = 128
 
-# One reproducibility seed for every sample/shuffle/split 
+# One reproducibility seed for every sample/shuffle/split
 RANDOM_SEED = 42
+
+# The train/val/test split names, in a fixed order, so every notebook and
+# .py file builds its {split_name: df}-style mappings from the same names.
+SPLIT_NAMES = ("train", "val", "test")
 
 # Anchored to this file's location (not the process cwd), so these resolve
 # correctly regardless of where a notebook kernel or script is launched from.
