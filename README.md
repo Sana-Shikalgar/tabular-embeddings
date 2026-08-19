@@ -33,13 +33,14 @@ for how to obtain the dataset locally.
 
 ## What's in This Branch
 
-A TMDB-only data pipeline, in five notebooks: characterizing the raw
+A TMDB-only data pipeline, in six notebooks: characterizing the raw
 dataset, cleaning it, constructing and comparing candidate feature sets,
-producing two final train/val/test splits, and encoding those splits into
-the shared per-type feature representations and baselines that later
-embedding-paradigm notebooks build on. See "Notebook Run Order" below
-for how the notebooks depend on each other, and "Dataset Shapes" for what
-each stage produces.
+producing two final train/val/test splits, encoding those splits into
+the shared per-type feature representations and baselines, and finally
+training and comparing three embedding paradigms (FT-Transformer, SubTab,
+SCARF) on top of those encoders. See "Notebook Run Order" below for how
+the notebooks depend on each other, and "Dataset Shapes" for what each
+stage produces.
 
 ## Dataset Shapes
 
@@ -109,6 +110,12 @@ must be run in order:
    candidate is active in `src/config.py`, and builds the raw/classical
    baselines -> encoders under `data/encoders/<candidate>/`, baseline
    parquet files under `models/<candidate>/`.
+6. **`05_embedding_paradigms.ipynb`** -- trains and compares three
+   embedding paradigms (FT-Transformer, SubTab, SCARF) on top of `04`'s
+   fitted encoders -> each paradigm's `{train,val,test}.parquet`
+   embeddings (`id` first column) and `diagnostics/loss_curve.csv` under
+   `models/<candidate>/<paradigm>/`, with training-curve/diagnostic
+   figures under `reports/figures/05/`.
 
 Notebooks `00`-`03` log a timestamped summary to `reports/eda_log.md`;
 `04` logs to its own `reports/feature_encoding_log.md`.
@@ -130,6 +137,11 @@ duplicating logic:
 - **`src/features/`** -- the per-type encoder classes and the
   `FittedEncoders` bundle that `04_feature_encoding.ipynb` fits and saves,
   for reuse by later embedding-paradigm notebooks.
+- **`src/paradigms/`** -- FT-Transformer/SubTab/SCARF's model, training,
+  and config code, plus a shared `TrainingLogger` for consistent
+  training-curve diagnostics; trained and compared by
+  `05_embedding_paradigms.ipynb`. `seeds.py`'s `set_global_seed()` seeds
+  `random`/`numpy`/`torch` once at that notebook's start.
 
 ## Development Notes
 
