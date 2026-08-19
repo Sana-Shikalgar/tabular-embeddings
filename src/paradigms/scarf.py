@@ -129,11 +129,16 @@ def build_scarf_flat_vector(
     transformed: dict[str, np.ndarray],
     tables: ScarfEmbeddingTables,
     fitted_encoders: FittedEncoders,
+    text_vectors: dict[str, np.ndarray] | None = None,
 ) -> torch.Tensor:
     """Concatenates one fitted_encoders.transform() batch (clean or
     corrupted) into SCARF's flat input vector: numeric, one-hot language,
     pooled list fields, then the two text embeddings, in that fixed
-    order."""
+    order. text_vectors, when given, supplies overview/original_title's
+    vectors instead of transformed -- the precomputed-once,
+    reused-across-batches path, since those two fields are never
+    corrupted; when None, transformed must carry them itself, unchanged
+    from before."""
     device = next(tables.parameters()).device
 
     numeric = torch.from_numpy(transformed["numeric"]).float().to(device)
@@ -148,11 +153,12 @@ def build_scarf_flat_vector(
     pooled = pool_list_fields(transformed, tables)
     list_vectors = [pooled[field] for field in fitted_encoders.column_groups.list_cols]
 
-    text_vectors = [
-        torch.from_numpy(transformed[field]).float().to(device) for field in TEXT_FIELDS
+    text_source = text_vectors if text_vectors is not None else transformed
+    text_vecs = [
+        torch.from_numpy(text_source[field]).float().to(device) for field in TEXT_FIELDS
     ]
 
-    return torch.cat([numeric, language_onehot, *list_vectors, *text_vectors], dim=1)
+    return torch.cat([numeric, language_onehot, *list_vectors, *text_vecs], dim=1)
 
 
 def build_scarf_views(
@@ -162,19 +168,30 @@ def build_scarf_views(
     p: float,
     rng: np.random.Generator,
     marginals: dict[str, np.ndarray] | None = None,
+    text_vectors: dict[str, np.ndarray] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Builds SCARF's (clean, corrupted) view pair for one batch: corrupts
     a copy of df (drawing each column's replacement values from marginals
     when given, otherwise from df itself), transforms both the original
     and corrupted copies, and flattens each into SCARF's input vector via
-    the same shared-weight tables."""
+    the same shared-weight tables. text_vectors, when given, supplies
+    overview/original_title's vectors directly -- precomputed once
+    outside the batch loop, since corruption never touches them -- and
+    both transform() calls skip text (include_text=False) instead of
+    recomputing it; when None, both transform() calls include text as
+    before."""
     corrupted_df = corrupt_dataframe(df, fitted_encoders, p, rng, marginals=marginals)
 
-    clean_transformed = fitted_encoders.transform(df)
-    corrupted_transformed = fitted_encoders.transform(corrupted_df)
+    include_text = text_vectors is None
+    clean_transformed = fitted_encoders.transform(df, include_text=include_text)
+    corrupted_transformed = fitted_encoders.transform(corrupted_df, include_text=include_text)
 
-    clean_vector = build_scarf_flat_vector(clean_transformed, tables, fitted_encoders)
-    corrupted_vector = build_scarf_flat_vector(corrupted_transformed, tables, fitted_encoders)
+    clean_vector = build_scarf_flat_vector(
+        clean_transformed, tables, fitted_encoders, text_vectors=text_vectors
+    )
+    corrupted_vector = build_scarf_flat_vector(
+        corrupted_transformed, tables, fitted_encoders, text_vectors=text_vectors
+    )
 
     return clean_vector, corrupted_vector
 
