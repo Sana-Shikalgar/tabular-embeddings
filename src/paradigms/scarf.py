@@ -130,15 +130,17 @@ def build_scarf_flat_vector(
     tables: ScarfEmbeddingTables,
     fitted_encoders: FittedEncoders,
     text_vectors: dict[str, np.ndarray] | None = None,
+    include_text: bool = True,
 ) -> torch.Tensor:
     """Concatenates one fitted_encoders.transform() batch (clean or
     corrupted) into SCARF's flat input vector: numeric, one-hot language,
-    pooled list fields, then the two text embeddings, in that fixed
-    order. text_vectors, when given, supplies overview/original_title's
-    vectors instead of transformed -- the precomputed-once,
-    reused-across-batches path, since those two fields are never
-    corrupted; when None, transformed must carry them itself, unchanged
-    from before."""
+    pooled list fields, then -- unless include_text=False -- the two text
+    embeddings, in that fixed order. text_vectors, when given, supplies
+    overview/original_title's vectors instead of transformed -- the
+    precomputed-once, reused-across-batches path, since those two fields
+    are never corrupted; when None, transformed must carry them itself,
+    unchanged from before. include_text=False skips appending text
+    entirely, regardless of text_vectors/transformed."""
     device = next(tables.parameters()).device
 
     numeric = torch.from_numpy(transformed["numeric"]).float().to(device)
@@ -153,10 +155,12 @@ def build_scarf_flat_vector(
     pooled = pool_list_fields(transformed, tables)
     list_vectors = [pooled[field] for field in fitted_encoders.column_groups.list_cols]
 
-    text_source = text_vectors if text_vectors is not None else transformed
-    text_vecs = [
-        torch.from_numpy(text_source[field]).float().to(device) for field in TEXT_FIELDS
-    ]
+    text_vecs: list[torch.Tensor] = []
+    if include_text:
+        text_source = text_vectors if text_vectors is not None else transformed
+        text_vecs = [
+            torch.from_numpy(text_source[field]).float().to(device) for field in TEXT_FIELDS
+        ]
 
     return torch.cat([numeric, language_onehot, *list_vectors, *text_vecs], dim=1)
 

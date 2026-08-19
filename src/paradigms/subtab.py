@@ -101,12 +101,18 @@ class SubtabListReducer:
         return csr_matrix(classical_baseline[field_cols].to_numpy())
 
 
-def _segment_width(name: str, fitted_encoders: FittedEncoders, list_reducers: dict) -> int:
+def _segment_width(
+    name: str, fitted_encoders: FittedEncoders, list_reducers: dict, include_text: bool = True
+) -> int:
     """Returns one FLAT_VECTOR_SEGMENT_ORDER segment's column width,
     derived from fitted_encoders/list_reducers alone -- no df/batch
     needed. list_reducers is checked before column_groups.list_cols:
     keywords/production_companies are list fields too, but take the SVD
-    path when present in list_reducers rather than the multi-hot path."""
+    path when present in list_reducers rather than the multi-hot path.
+    include_text=False rejects overview/original_title -- callers that
+    filter FLAT_VECTOR_SEGMENT_ORDER down before iterating should never
+    reach this branch, but it's guarded here too rather than silently
+    returning a width for an excluded field."""
     if name == "numeric":
         return fitted_encoders.dims["numeric"]
     if name == "original_language":
@@ -116,20 +122,30 @@ def _segment_width(name: str, fitted_encoders: FittedEncoders, list_reducers: di
     if name in fitted_encoders.column_groups.list_cols:
         return len(fitted_encoders.list_poolers[name].token_to_index) + 1
     if name in TEXT_FIELDS:
+        if not include_text:
+            raise ValueError(f"_segment_width: {name!r} is a text field but include_text=False")
         return fitted_encoders.dims[name]
     raise ValueError(f"unknown segment name: {name!r}")
 
 
 def flat_vector_segment_bounds(
-    fitted_encoders: FittedEncoders, list_reducers: dict
+    fitted_encoders: FittedEncoders, list_reducers: dict, include_text: bool = True
 ) -> dict[str, tuple[int, int]]:
     """Returns each FLAT_VECTOR_SEGMENT_ORDER segment's (start, end)
     column range in build_flat_vector's output, without changing what
-    build_flat_vector itself returns."""
+    build_flat_vector itself returns. include_text=False excludes
+    overview/original_title from the iteration (and the returned dict)
+    -- FLAT_VECTOR_SEGMENT_ORDER itself is never mutated, only filtered
+    per-call."""
+    segment_order = (
+        FLAT_VECTOR_SEGMENT_ORDER
+        if include_text
+        else tuple(name for name in FLAT_VECTOR_SEGMENT_ORDER if name not in TEXT_FIELDS)
+    )
     bounds: dict[str, tuple[int, int]] = {}
     offset = 0
-    for name in FLAT_VECTOR_SEGMENT_ORDER:
-        width = _segment_width(name, fitted_encoders, list_reducers)
+    for name in segment_order:
+        width = _segment_width(name, fitted_encoders, list_reducers, include_text=include_text)
         bounds[name] = (offset, offset + width)
         offset += width
     return bounds
@@ -146,7 +162,7 @@ def _multihot(index_lists, width: int) -> np.ndarray:
 
 
 def build_flat_vector(
-    df: pd.DataFrame, fitted_encoders: FittedEncoders, list_reducers: dict
+    df: pd.DataFrame, fitted_encoders: FittedEncoders, list_reducers: dict, include_text: bool = True
 ) -> np.ndarray:
     """Concatenates every fitted_encoders.transform(df) key into one flat,
     fixed-order array (FLAT_VECTOR_SEGMENT_ORDER) -- the reconstruction
@@ -154,9 +170,18 @@ def build_flat_vector(
     three small multi-hot list fields pass through as-is; keywords/
     production_companies go through list_reducers' SVD instead of full
     multi-hot; the two text fields pass through as their 768-d SBERT
-    vectors."""
-    batch = fitted_encoders.transform(df)
+    vectors. include_text=False excludes overview/original_title from
+    the iteration (and from fitted_encoders.transform()'s own lookup)
+    -- FLAT_VECTOR_SEGMENT_ORDER itself is never mutated, only filtered
+    per-call."""
+    batch = fitted_encoders.transform(df, include_text=include_text)
     segments: list[np.ndarray] = []
+
+    segment_order = (
+        FLAT_VECTOR_SEGMENT_ORDER
+        if include_text
+        else tuple(name for name in FLAT_VECTOR_SEGMENT_ORDER if name not in TEXT_FIELDS)
+    )
 
     # Built once here rather than once per list_reducers field -- both
     # keywords and production_companies otherwise each independently rebuild
@@ -174,18 +199,18 @@ def build_flat_vector(
             fitted_encoders.list_poolers,
         )
 
-    for name in FLAT_VECTOR_SEGMENT_ORDER:
+    for name in segment_order:
         if name == "numeric":
             segments.append(batch["numeric"])
         elif name == "original_language":
-            width = _segment_width(name, fitted_encoders, list_reducers)
+            width = _segment_width(name, fitted_encoders, list_reducers, include_text=include_text)
             segments.append(np.eye(width, dtype=np.float64)[batch["original_language"]])
         elif name in list_reducers:
             segments.append(
                 list_reducers[name].transform(df, fitted_encoders, classical_baseline)
             )
         elif name in fitted_encoders.column_groups.list_cols:
-            width = _segment_width(name, fitted_encoders, list_reducers)
+            width = _segment_width(name, fitted_encoders, list_reducers, include_text=include_text)
             segments.append(_multihot(batch[name], width))
         elif name in TEXT_FIELDS:
             segments.append(batch[name])
@@ -194,8 +219,8 @@ def build_flat_vector(
 
     flat = np.concatenate(segments, axis=1)
 
-    bounds = flat_vector_segment_bounds(fitted_encoders, list_reducers)
-    expected_width = bounds[FLAT_VECTOR_SEGMENT_ORDER[-1]][1]
+    bounds = flat_vector_segment_bounds(fitted_encoders, list_reducers, include_text=include_text)
+    expected_width = bounds[segment_order[-1]][1]
     assert flat.shape[1] == expected_width, (
         f"build_flat_vector produced width {flat.shape[1]}, but "
         f"flat_vector_segment_bounds computed {expected_width} -- the two must agree"

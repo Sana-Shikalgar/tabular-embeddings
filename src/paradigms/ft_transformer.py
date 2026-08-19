@@ -21,13 +21,15 @@ class FeatureTokenizer(nn.Module):
     """Embeds/projects every feature type to a common d_token width and
     returns one token per feature, in a fixed column order."""
 
-    def __init__(self, fitted_encoders: FittedEncoders, d_token: int):
+    def __init__(self, fitted_encoders: FittedEncoders, d_token: int, include_text: bool = True):
         """Builds one submodule per feature (numeric/bypass linear layers,
         categorical and list embedding tables, text projections), sized
-        from fitted_encoders."""
+        from fitted_encoders. text_projections is only built when
+        include_text is True."""
         super().__init__()
         self.column_groups = fitted_encoders.column_groups
         self.d_token = d_token
+        self.include_text = include_text
 
         # Slice offsets into the "numeric" array, matching pipeline.py's
         # transform() concatenation order exactly: numeric_cols first
@@ -64,14 +66,18 @@ class FeatureTokenizer(nn.Module):
             }
         )
 
-        self.text_projections = nn.ModuleDict(
-            {field: nn.Linear(fitted_encoders.dims[field], d_token) for field in TEXT_FIELDS}
-        )
+        if self.include_text:
+            self.text_projections = nn.ModuleDict(
+                {field: nn.Linear(fitted_encoders.dims[field], d_token) for field in TEXT_FIELDS}
+            )
 
-    def forward(self, batch: dict[str, np.ndarray]) -> torch.Tensor:
+    def forward(self, batch: dict[str, np.ndarray], include_text: bool = True) -> torch.Tensor:
         """Tokenizes one fitted_encoders.transform() batch into a
         (batch, n_tokens, d_token) tensor, one token per feature in the
-        fixed column order."""
+        fixed column order. Text tokens are appended only when both this
+        call's include_text and the tokenizer's own (set at construction)
+        are True -- skipped otherwise, since text_projections doesn't
+        exist unless the tokenizer itself was built with include_text."""
         device = self.language_embedding.weight.device
         tokens: list[torch.Tensor] = []
 
@@ -97,9 +103,10 @@ class FeatureTokenizer(nn.Module):
                 pooled_rows.append(ListFieldPooler.pool(item_embeddings, mode=pooling_mode))
             tokens.append(torch.stack(pooled_rows))
 
-        for field in TEXT_FIELDS:
-            vec = torch.from_numpy(batch[field]).float().to(device)
-            tokens.append(self.text_projections[field](vec))
+        if self.include_text and include_text:
+            for field in TEXT_FIELDS:
+                vec = torch.from_numpy(batch[field]).float().to(device)
+                tokens.append(self.text_projections[field](vec))
 
         return torch.stack(tokens, dim=1)
 
