@@ -66,14 +66,13 @@ def _run_validation(
     segment_bounds: dict[str, tuple[int, int]],
 ) -> tuple[float, dict[str, float]]:
     """Fixed-order pass over val_full, computing L_r and per-segment
-    reconstruction MSE from the same reconstructions. Returns
-    (val_loss, val_segment_mse)."""
+    reconstruction MSE (one value per segment_bounds entry) from the same
+    reconstructions. Returns (val_loss, val_segment_mse)."""
     n_rows = val_full.shape[0]
     model.eval()
 
     total_loss = 0.0
-    total_svd_segments = 0.0
-    total_rest = 0.0
+    total_segment_mse: dict[str, float] = {name: 0.0 for name in segment_bounds}
     total_rows = 0
     with torch.no_grad():
         for start in range(0, n_rows, batch_size):
@@ -87,15 +86,12 @@ def _run_validation(
 
             n = chunk.shape[0]
             total_loss += chunk_loss.item() * n
-            total_svd_segments += chunk_segment_mse["svd_segments"] * n
-            total_rest += chunk_segment_mse["rest"] * n
+            for name, mse in chunk_segment_mse.items():
+                total_segment_mse[name] += mse * n
             total_rows += n
 
     val_loss = total_loss / total_rows
-    val_segment_mse = {
-        "keywords_and_production_companies": total_svd_segments / total_rows,
-        "rest": total_rest / total_rows,
-    }
+    val_segment_mse = {name: total / total_rows for name, total in total_segment_mse.items()}
     return val_loss, val_segment_mse
 
 
@@ -164,11 +160,9 @@ def train_subtab(
     model.load_state_dict(best_state_dict)
     restored_segment_mse = val_segment_mse[best_epoch - 1]
     print(f"Restored epoch {best_epoch}'s weights (val L_r: {best_val_loss:.4f})")
-    print(
-        f"  at restored epoch: keywords_and_production_companies MSE = "
-        f"{restored_segment_mse['keywords_and_production_companies']:.4f}, "
-        f"rest MSE = {restored_segment_mse['rest']:.4f}"
-    )
+    print("  at restored epoch, per-segment MSE:")
+    for name, mse in restored_segment_mse.items():
+        print(f"    {name}: {mse:.4f}")
     logger.save(models_dir, "subtab")
 
     return model, logger, val_segment_mse

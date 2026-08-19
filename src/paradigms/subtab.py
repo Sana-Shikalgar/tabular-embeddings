@@ -307,18 +307,11 @@ def per_segment_reconstruction_mse(
 ) -> dict[str, float]:
     """Diagnostic only -- does not feed backprop or change the training
     objective. Splits build_flat_vector's columns via segment_bounds into
-    "svd_segments" (keywords + production_companies) and "rest" (every
-    other segment), and returns each group's mean reconstruction MSE,
+    each FLAT_VECTOR_SEGMENT_ORDER segment present in segment_bounds
+    (numeric, original_language, each multi-hot list field, keywords/
+    production_companies, and the two text fields when segment_bounds
+    includes them), and returns one mean reconstruction MSE per segment,
     averaged the same way as reconstruction_loss."""
-    svd_fields = ("keywords", "production_companies")
-    svd_idx = torch.cat([torch.arange(*segment_bounds[field]) for field in svd_fields])
-    all_idx = torch.arange(x_full.shape[1])
-    svd_mask = torch.zeros(x_full.shape[1], dtype=torch.bool)
-    svd_mask[svd_idx] = True
-    rest_idx = all_idx[~svd_mask]
-    assert len(svd_idx) + len(rest_idx) == x_full.shape[1], (
-        "svd_segments/rest column groups must partition x_full's columns exactly"
-    )
 
     def _avg_mse(col_idx: torch.Tensor) -> float:
         losses = [
@@ -328,4 +321,8 @@ def per_segment_reconstruction_mse(
         return torch.stack(losses).mean().item()
 
     with torch.no_grad():
-        return {"svd_segments": _avg_mse(svd_idx), "rest": _avg_mse(rest_idx)}
+        return {
+            name: _avg_mse(torch.arange(*segment_bounds[name]))
+            for name in FLAT_VECTOR_SEGMENT_ORDER
+            if name in segment_bounds
+        }
