@@ -92,12 +92,16 @@ def _run_validation(
     val_df: pd.DataFrame,
     fitted_encoders: FittedEncoders,
     scarf_config: SCARFConfig,
-    rng: np.random.Generator,
+    seed: int,
     marginals: dict[str, np.ndarray] | None = None,
 ) -> float:
     """Fixed-order pass over val_df, computing NT-Xent loss without
-    gradient updates. Returns the row-count-weighted mean loss across
-    batches."""
+    gradient updates. Builds its own np.random.default_rng(seed) internally
+    on every call -- the same seed every time, so every validation pass
+    corrupts identically -- rather than sharing (and mutating) the
+    training loop's own rng. Returns the row-count-weighted mean loss
+    across batches."""
+    rng = np.random.default_rng(seed)
     n_rows = len(val_df)
     tables.eval()
     encoder.eval()
@@ -159,7 +163,7 @@ def train_scarf(
             marginals=marginals,
         )
         val_loss = _run_validation(
-            tables, encoder, head, val_df, fitted_encoders, scarf_config, rng,
+            tables, encoder, head, val_df, fitted_encoders, scarf_config, seed,
             marginals=marginals,
         )
         logger.log(epoch, train_loss, val_loss)
