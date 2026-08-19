@@ -1,26 +1,7 @@
-"""Section 3.5's RQ4/DO5 trade-off table -- the basis for Table 3.3, combining
-one metric from each of the three axes already computed elsewhere in this
-notebook (clustering quality, interpretability agreement, fairness
-amplification) into a single per-representation comparison.
-
-This module deliberately does NOT include the Step 4 host regressor's
-r2/mae anywhere. That score exists solely so Step 5's LIME/SHAP have
-something to explain (host_model.py's own module docstring) -- it is a DO3
-sanity check, never a DO2 representation-quality axis, and
-Chapter3_Methodology_Structure.md is explicit that folding it into Table 3.3
-would be "smuggling" a fourth axis in under cover of the other three. If a
-future edit adds an r2/mae column here, that edit is wrong on its face --
-this docstring is the guard against it happening by accident.
-
-assemble_raw_table pulls exactly one column per source table (silhouette,
-calinski_harabasz, davies_bouldin from clustering_table; agreement from
-interpretability_table's attribution_agreement; delta_accuracy from
-fairness_table) into one frame, asserting all three inputs share the same
-representation index/order first -- concatenating misaligned tables would
-silently mix one representation's clustering score with another's fairness
-score. normalize_metrics then min-max scales that frame to [0, 1] per
-column, in a fixed higher-is-better direction, for Table 3.3's combined
-view only; see its own docstring for what is lost in that combination.
+"""Assembles and normalises 06_evaluation_protocol.ipynb's Table 3.3
+trade-off table from clustering, interpretability, and fairness results
+computed earlier in that notebook. Deliberately excludes the host
+regressor's r2/mae -- that's a sanity check, not a quality axis.
 """
 
 from __future__ import annotations
@@ -34,22 +15,13 @@ def assemble_raw_table(
     interpretability_table: pd.DataFrame,
     fairness_table: pd.DataFrame,
 ) -> pd.DataFrame:
-    """One row per representation, exactly these columns: silhouette,
-    calinski_harabasz, davies_bouldin (clustering_table, Eq. 3.16-3.18),
-    agreement (interpretability_table's attribution_agreement, [D49]),
-    delta_accuracy (fairness_table, Eq. 3.20, signed).
-
-    Asserts clustering_table, interpretability_table, and fairness_table
-    all share the same row index in the same order before pulling any
-    column out of them -- concatenating by column position rather than by
-    a checked, matching index would silently attribute one
-    representation's clustering score to a different representation's row.
-
-    fairness_table's delta_accuracy is NaN for the "raw" representation
-    itself (amplification is only defined relative to raw, per
-    fairness.compute_amplification's own docstring) -- that NaN is carried
-    through into this table's "raw" row unchanged, not filled or dropped.
-    normalize_metrics documents what happens to it downstream.
+    """Combines one column from each source table into a single per-
+    representation frame: silhouette, calinski_harabasz, davies_bouldin
+    from clustering_table; agreement from interpretability_table's
+    attribution_agreement; delta_accuracy from fairness_table. Asserts all
+    three inputs share the same row index/order first, so a column is
+    never attributed to the wrong representation. fairness_table's NaN
+    delta_accuracy for "raw" is carried through unchanged.
     """
     assert clustering_table.index.equals(interpretability_table.index), (
         "clustering_table and interpretability_table do not share the same "
@@ -75,37 +47,13 @@ def assemble_raw_table(
 
 
 def normalize_metrics(raw_table: pd.DataFrame) -> pd.DataFrame:
-    """Min-max normalises raw_table to [0, 1] per column, oriented so 1 is
-    always the more favourable value, per this fixed direction convention:
-
-        silhouette:         higher_better
-        calinski_harabasz:  higher_better
-        davies_bouldin:     lower_better  (normalise, then 1 - x)
-        agreement:          higher_better
-        delta_accuracy:     abs(delta_accuracy), then lower_better
-
-    delta_accuracy is normalised on its ABSOLUTE VALUE, not its signed
-    value: this treats a representation that amplifies the sensitive
-    attribute by +0.10 and one that obscures it by -0.10 as equally
-    unfavourable for this single combined score. That collapses the
-    amplified-vs-obscured distinction Step 6's own fairness_table
-    preserves in its signed delta_accuracy column -- Table 3.3's caption
-    must point back to that signed column for readers who need to know
-    WHICH direction a representation moved, not just how far. This
-    function's output is a trade-off-view summary only, the same caveat
-    interpretability.attribution_agreement's own docstring makes about its
-    single agreement number.
-
-    A column with zero variance across representations (every value
-    identical) returns 0.5 for every row with a non-NaN input, rather than
-    dividing by zero -- 0.5 signals "no representation differs on this
-    metric," not an arbitrary min or max.
-
-    raw_table's "raw" row carries a NaN delta_accuracy (assemble_raw_table's
-    own docstring) -- that NaN is excluded from the min/max computed for
-    the delta_accuracy column, and the "raw" row's own normalised
-    delta_accuracy stays NaN in the output; it is never imputed to 0.5 or
-    any other value, even when the column is otherwise zero-variance.
+    """Min-max scales raw_table to [0, 1] per column, oriented so 1 is
+    always more favourable: silhouette/calinski_harabasz/agreement are
+    higher_better as-is; davies_bouldin and delta_accuracy (on its
+    absolute value) are flipped to lower_better. A zero-variance column
+    returns 0.5 for every non-NaN row instead of dividing by zero.
+    "raw"'s NaN delta_accuracy is excluded from the column's min/max and
+    stays NaN in the output, never imputed.
     """
     direction = {
         "silhouette": "higher_better",
