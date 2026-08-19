@@ -1,13 +1,5 @@
-"""Enforces the target/feature/identifier split defined in Section 3.2:
-`vote_average` is the supervised target only. Every non-supervised path
-must build its feature frame via `.drop_target()`, so the target column
-isn't just "unused" by convention -- it is physically not present in the
-frame handed to that code.
-
-`id` is the only column excluded as non-generalisable. `title` and
-`original_title` are deliberately treated as text features, not
-identifiers -- both carry distinct, fairness-relevant content once broken
-down by `original_language`.
+"""Splits a candidate DataFrame's columns into target/id/feature groups,
+and further partitions feature columns by type.
 """
 
 from __future__ import annotations
@@ -20,14 +12,18 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class FeatureTargetSplit:
+    """Fixed target/id/feature column split for a candidate DataFrame."""
+
     target_col: str
     id_cols: list[str]
     feature_cols: list[str]
 
     def select(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+        """Returns (feature columns, target column) as (DataFrame, Series)."""
         return df[self.feature_cols], df[self.target_col]
 
     def drop_target(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Returns df restricted to feature and id columns, excluding the target."""
         return df[self.feature_cols + self.id_cols]
 
 
@@ -36,6 +32,7 @@ def build_feature_target_split(
     target_col: str = "vote_average",
     id_cols: tuple[str, ...] = ("id", "title",),
 ) -> FeatureTargetSplit:
+    """Builds a FeatureTargetSplit from df's columns, given the target and id column names."""
     assert target_col in df.columns, f"target_col {target_col!r} not in df.columns"
     for col in id_cols:
         assert col in df.columns, f"id_col {col!r} not in df.columns"
@@ -52,6 +49,8 @@ def build_feature_target_split(
 
 @dataclass(frozen=True)
 class ColumnGroups:
+    """Feature columns partitioned by type: numeric, bypass, categorical, text, list-valued."""
+
     numeric_cols: list[str]
     bypass_cols: list[str]
     categorical_cols: list[str]
@@ -60,6 +59,7 @@ class ColumnGroups:
 
 
 def _is_list_valued(s: pd.Series) -> bool:
+    """True if s holds list-like values in every non-null cell."""
     if s.dtype != object:
         return False
     non_null = s.dropna()
@@ -72,16 +72,16 @@ def _is_list_valued(s: pd.Series) -> bool:
 
 
 def _is_bypass(s: pd.Series, name: str) -> bool:
+    """True if s is boolean, or a sin/cos-named float column, both passed through unchanged."""
     if pd.api.types.is_bool_dtype(s):
         return True
     return pd.api.types.is_float_dtype(s) and (name.endswith("_sin") or name.endswith("_cos"))
 
 
 def build_column_groups(df: pd.DataFrame, split: FeatureTargetSplit) -> ColumnGroups:
-    """Partitions split.feature_cols into five groups by inspecting the
-    actual dtypes/values in df -- not by a hardcoded column-name list, so
-    a future schema change is caught by the exhaustiveness check below
-    rather than silently mis-routed."""
+    """Partitions split.feature_cols into five type-based groups by
+    inspecting df's actual dtypes, asserting every column lands in
+    exactly one group."""
     feature_cols = split.feature_cols
 
     list_cols = [c for c in feature_cols if _is_list_valued(df[c])]

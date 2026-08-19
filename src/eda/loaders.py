@@ -1,6 +1,5 @@
-"""Loaders for the two candidate datasets used in this dissertation's EDA:
-TMDB (movies, downloaded via the Kaggle API) and Inside Airbnb London
-(listings, downloaded manually — Inside Airbnb has no stable scriptable URL).
+"""Loader for the TMDB candidate dataset used in this dissertation's EDA
+(movies, downloaded via the Kaggle API).
 """
 
 from __future__ import annotations
@@ -11,12 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.config import (
-    AIRBNB_RAW_DIR,
-    AIRBNB_SOURCE_URL,
-    TMDB_KAGGLE_DATASET,
-    TMDB_RAW_DIR,
-)
+from src.config import TMDB_KAGGLE_DATASET, TMDB_RAW_DIR
 
 # dtype hints for the TMDB CSV (930k-movies dump). This intentionally covers
 # 22 of the dataset's columns; "adult" is left to pandas' default bool
@@ -63,20 +57,6 @@ download automatically: generate a token at
 https://www.kaggle.com/settings/api and save it to ~/.kaggle/access_token
 (or set the KAGGLE_API_TOKEN environment variable).
 """
-
-_AIRBNB_MANUAL_INSTRUCTIONS = """\
-No Airbnb listings file found in {raw_dir}.
-
-This dataset must be downloaded manually from Inside Airbnb (there is no
-stable scriptable URL):
-  1. Go to {url}
-     (or browse http://insideairbnb.com/get-the-data/ for a later snapshot)
-  2. Download the "listings.csv.gz" file for London, England.
-  3. Place it, unmodified, at: {raw_dir}/listings.csv.gz
-
-Then re-run this loader.
-"""
-
 
 def _has_kaggle_credentials() -> bool:
     if os.environ.get("KAGGLE_API_TOKEN"):
@@ -131,27 +111,4 @@ def load_tmdb(raw_dir: Path = TMDB_RAW_DIR) -> pd.DataFrame:
         )
 
     df = pd.read_csv(csv_files[0], dtype=TMDB_DTYPES, parse_dates=["release_date"])
-    return df
-
-
-def load_airbnb(raw_dir: Path = AIRBNB_RAW_DIR) -> pd.DataFrame:
-    """Load Inside Airbnb London listings from ``raw_dir``. Raises a helpful
-    error if no file is present, since this dataset must be fetched manually.
-    """
-    raw_dir = Path(raw_dir)
-    raw_dir.mkdir(parents=True, exist_ok=True)
-
-    candidates = sorted(raw_dir.glob("listings.csv*"))
-    if not candidates:
-        raise FileNotFoundError(
-            _AIRBNB_MANUAL_INSTRUCTIONS.format(raw_dir=raw_dir, url=AIRBNB_SOURCE_URL)
-        )
-
-    df = pd.read_csv(candidates[0], low_memory=False)
-
-    if "price" in df.columns:
-        df["price"] = (
-            df["price"].astype("string").str.replace(r"[\$,]", "", regex=True).astype("float64")
-        )
-
     return df
