@@ -45,8 +45,8 @@ each stage produces.
 |---|---:|---:|
 | Raw (Kaggle download) | 1,456,829 | 24 |
 | Cleaned (`01_overview_cleaning`) | 863,858 | 19 |
-| Chosen candidate A -- `tmdb_br_gt0` | 10,504 | 20 |
-| Chosen candidate B -- `tmdb_nbr_gt5` | 107,219 | 18 |
+| Chosen candidate A -- `tmdb_br_gt0` | 10,504 | 25 |
+| Chosen candidate B -- `tmdb_nbr_gt5` | 107,219 | 23 |
 
 Two candidates come out of `02_preprocessing` and carry through
 `03_feature_split`, differing in how they trade off row count against the
@@ -54,11 +54,11 @@ Two candidates come out of `02_preprocessing` and carry through
 
 - **`tmdb_br_gt0`** (`tmdb_budget_revenue_gt0`): rows with non-null
   `budget` **and** `revenue`, filtered to `vote_count > 0`. Keeps `budget`
-  and `revenue` as features (20 columns), at the cost of a much smaller row
+  and `revenue` as features (25 columns), at the cost of a much smaller row
   count. Split 80/10/10 -> train 8,403 / val 1,050 / test 1,051.
 - **`tmdb_nbr_gt5`** (`tmdb_no_budget_revenue_gt5`): `budget` and `revenue`
   dropped entirely as columns (too sparse to keep -- see `02_preprocessing`
-  Section 1), filtered to `vote_count > 5`. 18 columns, roughly 10x the
+  Section 1), filtered to `vote_count > 5`. 23 columns, roughly 10x the
   rows of the other candidate. Split 70/15/15 -> train 75,053 / val 16,083
   / test 16,083.
 
@@ -74,13 +74,15 @@ train/val/test files are saved to `data/final/`.
 `production_companies`, `production_countries`, `spoken_languages`,
 `keywords`.
 
-**`tmdb_br_gt0`** (20 columns): `id`, `title`, `vote_average`, `revenue`,
+**`tmdb_br_gt0`** (25 columns): `id`, `title`, `vote_average`, `revenue`,
 `runtime`, `budget`, `original_language`, `original_title`, `overview`,
 `popularity`, `genres`, `production_companies`, `production_countries`,
-`spoken_languages`, `keywords`, `has_production_companies`,
-`has_keywords`, `release_year`, `release_month_sin`, `release_month_cos`.
+`spoken_languages`, `keywords`, `has_genres`, `has_keywords`,
+`has_production_companies`, `has_production_countries`,
+`has_spoken_languages`, `has_overview`, `release_year`,
+`release_month_sin`, `release_month_cos`, `title_differs_from_original`.
 
-**`tmdb_nbr_gt5`** (18 columns): same as `tmdb_br_gt0` above, minus
+**`tmdb_nbr_gt5`** (23 columns): same as `tmdb_br_gt0` above, minus
 `revenue` and `budget`.
 
 ## Notebook Run Order
