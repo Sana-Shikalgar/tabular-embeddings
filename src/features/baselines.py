@@ -1,17 +1,5 @@
-"""The "raw" and "classical" feature-encoding conditions for the
-DO2/DO3/DO4 comparison (Chapter 4).
-
-build_raw_baseline: deliberately naive per column -- numeric untouched,
-`original_language` label/ordinal-encoded (not one-hot), list fields as
-item counts (not multi-hot). The naivety is the point: it's the
-reference the classical and embedding conditions are measured against.
-
-build_classical_baseline: proper encodings via the already-fitted
-Standardizer/CategoricalLookup/ListFieldPoolers -- numeric standardised,
-`original_language` one-hot, list fields multi-hot.
-
-Both drop `overview`/`original_title` (free text -- neither condition
-can encode it); named explicitly rather than silently dropped.
+"""Builds the "raw" and "classical" baseline feature encodings that the
+learned embedding paradigms are benchmarked against.
 """
 
 from __future__ import annotations
@@ -26,8 +14,7 @@ from src.features.target_split import FeatureTargetSplit
 
 # Free text: no classical (one-hot/multi-hot) encoding applies, and no
 # naive numeric encoding either -- dropped from both the raw and the
-# classical condition. Named explicitly here, and in the module
-# docstring, rather than silently dropped -- see the module docstring.
+# classical condition. 
 EXCLUDED_TEXT_COLS = {"overview", "original_title"}
 
 
@@ -38,6 +25,8 @@ def build_raw_baseline(
     categorical_lookup: CategoricalLookup,
     list_valued_cols: list[str],
 ) -> pd.DataFrame:
+    """Encodes df with minimal preprocessing: numeric columns as-is,
+    original_language as a single integer code, list fields as item counts."""
     lang_col = categorical_lookup.col
 
     missing_numeric = [c for c in numeric_cols if c not in split.feature_cols]
@@ -87,17 +76,16 @@ def build_classical_baseline(
     categorical_lookup: CategoricalLookup,
     list_vocabs: dict[str, ListFieldPooler],
 ) -> pd.DataFrame:
+    """Encodes df with standard preprocessing: numeric columns standardized,
+    original_language one-hot, list fields multi-hot."""
     assert set(numeric_cols) == set(standardizer.cols), (
         "numeric_cols must match the already-fitted standardizer's own cols: "
         f"numeric_cols={numeric_cols}, standardizer.cols={standardizer.cols}"
     )
     numeric_part = standardizer.transform(df)[numeric_cols]
 
-    # original_language: map to the fitted vocabulary's fixed integer codes
-    # first, then get_dummies against an explicit Categorical with every
-    # possible code (0..N) as a category -- this is what guarantees the
-    # same column set on train/val/test, rather than get_dummies deriving
-    # columns from whatever categories happen to appear in this df alone.
+    # original_language: Map original language to fixed integer codes, 
+    # then use get_dummies with all possible codes to ensure consistent columns across train/val/test.
     lang_col = categorical_lookup.col
     lang_index_to_token = {idx: token for token, idx in categorical_lookup.token_to_index.items()}
     n_lang_tokens = len(categorical_lookup.token_to_index)
@@ -132,9 +120,7 @@ def build_classical_baseline(
 
     # Everything else in feature_cols that isn't numeric, original_language,
     # a list field, or excluded free text: already-numeric/boolean columns
-    # (e.g. has_keywords, release_month_sin/cos) pass through unchanged --
-    # asserted, not assumed, so a stray text/list column added upstream in
-    # the future can't silently slip into a baseline meant to be fully numeric.
+    # (e.g. has_keywords, release_month_sin/cos) pass through unchanged.
     handled_cols = set(numeric_cols) | {lang_col} | set(list_vocabs.keys()) | EXCLUDED_TEXT_COLS
     passthrough_cols = [c for c in split.feature_cols if c not in handled_cols]
     non_numeric_passthrough = [

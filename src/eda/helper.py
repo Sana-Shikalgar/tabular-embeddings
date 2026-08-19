@@ -120,7 +120,7 @@ def _get_tokenizer():
     return AutoTokenizer.from_pretrained(config.SBERT_MODEL_NAME)
 
 
-def token_length_stats(texts, max_len=config.SBERT_MAX_SEQ_LENGTH, sample_size=20000, random_state=42):
+def token_length_stats(texts, max_len=config.SBERT_MAX_SEQ_LENGTH, sample_size=20000, random_state=config.RANDOM_SEED):
     """Estimates the token-length distribution of a text column under the
     config.SBERT_MODEL_NAME tokenizer, from a random sample (tokenizing the
     full column would be prohibitively slow for the TMDB-sized dataset), and
@@ -150,7 +150,7 @@ MIN_CHARS_FOR_LANG_DETECTION = 40
 LANG_DETECTION_CONFIDENCE = 0.90
 
 
-def flag_non_english(series, n=5000, random_state=42):
+def flag_non_english(series, n=5000, random_state=config.RANDOM_SEED):
     """Samples a text column and classifies each entry as non_english,
     too_short (below MIN_CHARS_FOR_LANG_DETECTION, detection not attempted),
     or uncertain (detection ran but wasn't a confident non-English call),

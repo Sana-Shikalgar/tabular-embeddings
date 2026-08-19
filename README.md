@@ -33,9 +33,11 @@ for how to obtain the dataset locally.
 
 ## What's in This Branch
 
-A TMDB-only data pipeline, in four notebooks: characterizing the raw
-dataset, cleaning it, constructing and comparing candidate feature sets, and
-producing two final train/val/test splits. See "Notebook Run Order" below
+A TMDB-only data pipeline, in five notebooks: characterizing the raw
+dataset, cleaning it, constructing and comparing candidate feature sets,
+producing two final train/val/test splits, and encoding those splits into
+the shared per-type feature representations and baselines that later
+embedding-paradigm notebooks build on. See "Notebook Run Order" below
 for how the notebooks depend on each other, and "Dataset Shapes" for what
 each stage produces.
 
@@ -45,8 +47,8 @@ each stage produces.
 |---|---:|---:|
 | Raw (Kaggle download) | 1,456,829 | 24 |
 | Cleaned (`01_overview_cleaning`) | 863,858 | 19 |
-| Chosen candidate A -- `tmdb_br_gt0` | 10,504 | 20 |
-| Chosen candidate B -- `tmdb_nbr_gt5` | 107,219 | 18 |
+| Chosen candidate A -- `tmdb_br_gt0` | 10,504 | 25 |
+| Chosen candidate B -- `tmdb_nbr_gt5` | 107,219 | 23 |
 
 Two candidates come out of `02_preprocessing` and carry through
 `03_feature_split`, differing in how they trade off row count against the
@@ -54,11 +56,11 @@ Two candidates come out of `02_preprocessing` and carry through
 
 - **`tmdb_br_gt0`** (`tmdb_budget_revenue_gt0`): rows with non-null
   `budget` **and** `revenue`, filtered to `vote_count > 0`. Keeps `budget`
-  and `revenue` as features (20 columns), at the cost of a much smaller row
+  and `revenue` as features (25 columns), at the cost of a much smaller row
   count. Split 80/10/10 -> train 8,403 / val 1,050 / test 1,051.
 - **`tmdb_nbr_gt5`** (`tmdb_no_budget_revenue_gt5`): `budget` and `revenue`
   dropped entirely as columns (too sparse to keep -- see `02_preprocessing`
-  Section 1), filtered to `vote_count > 5`. 18 columns, roughly 10x the
+  Section 1), filtered to `vote_count > 5`. 23 columns, roughly 10x the
   rows of the other candidate. Split 70/15/15 -> train 75,053 / val 16,083
   / test 16,083.
 
@@ -74,13 +76,15 @@ train/val/test files are saved to `data/final/`.
 `production_companies`, `production_countries`, `spoken_languages`,
 `keywords`.
 
-**`tmdb_br_gt0`** (20 columns): `id`, `title`, `vote_average`, `revenue`,
+**`tmdb_br_gt0`** (25 columns): `id`, `title`, `vote_average`, `revenue`,
 `runtime`, `budget`, `original_language`, `original_title`, `overview`,
 `popularity`, `genres`, `production_companies`, `production_countries`,
-`spoken_languages`, `keywords`, `has_production_companies`,
-`has_keywords`, `release_year`, `release_month_sin`, `release_month_cos`.
+`spoken_languages`, `keywords`, `has_genres`, `has_keywords`,
+`has_production_companies`, `has_production_countries`,
+`has_spoken_languages`, `has_overview`, `release_year`,
+`release_month_sin`, `release_month_cos`, `title_differs_from_original`.
 
-**`tmdb_nbr_gt5`** (18 columns): same as `tmdb_br_gt0` above, minus
+**`tmdb_nbr_gt5`** (23 columns): same as `tmdb_br_gt0` above, minus
 `revenue` and `budget`.
 
 ## Notebook Run Order
@@ -99,15 +103,33 @@ must be run in order:
    `data/processed/tmdb_br_gt0.parquet`, `data/processed/tmdb_nbr_gt5.parquet`.
 4. **`03_feature_split.ipynb`** -- stratified train/val/test split, rare-
    language and vocabulary bucketing -> the six files in `data/final/`.
+5. **`04_feature_encoding.ipynb`** -- fits the shared per-type encoders
+   (numeric standardisation + piecewise-linear binning, categorical
+   lookup, list-field pooling, frozen SBERT text encoding) on whichever
+   candidate is active in `src/config.py`, and builds the raw/classical
+   baselines -> encoders under `data/encoders/<candidate>/`, baseline
+   parquet files under `models/<candidate>/`.
 
-Each notebook also logs a timestamped summary to `reports/eda_log.md`.
+Notebooks `00`-`03` log a timestamped summary to `reports/eda_log.md`;
+`04` logs to its own `reports/feature_encoding_log.md`.
 
-## Shared Code (`src/eda/`)
+## Shared Code
 
-Every notebook's Setup cell imports from `src/eda/` rather than
-duplicating logic: `loaders.py` (dataset loading), `helper.py` (EDA/
-cleaning helper functions), `report.py` (figure saving and the
-`reports/eda_log.md` logger), and `config.py` (shared constants).
+Every notebook's Setup cell imports from shared modules rather than
+duplicating logic:
+
+- **`src/eda/`** -- `loaders.py` (dataset loading) and `helper.py` (EDA/
+  cleaning helper functions), used by notebooks `00`-`03`.
+- **`src/report.py`** -- figure saving and the timestamped markdown-log
+  helper, used by every notebook (each passes its own log file).
+- **`src/config.py`** -- constants shared across every notebook and
+  module (paths, the active candidate, the random seed, split names).
+- **`src/helper.py`** -- JSON save/load for fitted encoders, plus the
+  id-first-column convention for saved representation parquet files;
+  used by `04_feature_encoding.ipynb` and `src/features/pipeline.py`.
+- **`src/features/`** -- the per-type encoder classes and the
+  `FittedEncoders` bundle that `04_feature_encoding.ipynb` fits and saves,
+  for reuse by later embedding-paradigm notebooks.
 
 ## Development Notes
 

@@ -1,11 +1,5 @@
-"""Frozen SBERT sentence encoding, Eq. 3.7: a one-time, offline forward
-pass through a frozen sentence-transformers model, mean-pooled to a
-fixed-size vector per text. No fine-tuning anywhere -- the encoder's
-weights never update, so the same TextEncoder instance is applied
-identically to train, val, and test (no fit/transform split, unlike the
-other src/features/ classes, since there's no train-only state to fit).
-Reimers & Gurevych (2019), "Sentence-BERT: Sentence Embeddings using
-Siamese BERT-Networks."
+"""Frozen SBERT sentence encoder: a one-time forward pass through a
+pretrained sentence-transformers model, with no fine-tuning.
 """
 
 from __future__ import annotations
@@ -20,11 +14,12 @@ from src.config import SBERT_MODEL_NAME
 
 
 class TextEncoder:
+    """Wraps a frozen SentenceTransformer model for batched text encoding."""
+
     def __init__(self, model_name: str = SBERT_MODEL_NAME, batch_size: int = 64):
-        # Deferred import, same reasoning and DLL workaround as
-        # src/eda/helper.py's _get_tokenizer(): importing sentence_transformers
-        # pulls in torch, which some Windows Jupyter kernel processes fail to
-        # load unless torch's own lib directory is registered first.
+        """Loads model_name in eval mode with gradients disabled, verifying it's frozen."""
+        # Deferred import: importing sentence_transformers pulls in torch, which 
+        # some Windows Jupyter kernels may fail to load unless torch's lib directory is registered first.
         if hasattr(os, "add_dll_directory"):
             torch_lib_dir = Path(sys.executable).parent / "Lib" / "site-packages" / "torch" / "lib"
             if torch_lib_dir.exists():
@@ -47,6 +42,7 @@ class TextEncoder:
         )
 
     def encode(self, texts: list[str]) -> np.ndarray:
+        """Encodes a list of texts into one fixed-size float32 vector per text."""
         import torch
 
         with torch.no_grad():
