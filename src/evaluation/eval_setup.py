@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from src import config
+from src.helper import load_representation_with_id
 
 REPR_NAMES = ("raw", "classical", "ft_transformer", "subtab", "scarf")
 FIT_SPLIT = "train"
@@ -54,9 +55,12 @@ def load_representations(
 ) -> dict[str, dict[str, pd.DataFrame]]:
     """Loads every representation's saved (N, d) feature table from
     models_dir / {representation} / f"{split}.parquet", one row per input
-    row in the source split's own order. Returns
-    representations[repr_name][split] -> pd.DataFrame. Raises
-    FileNotFoundError naming the exact missing path if any file is absent.
+    row in the source split's own order. Every file carries `id` as its
+    first column (the save_representation_with_id convention); this
+    function strips it back out via load_representation_with_id so
+    representations[repr_name][split] is features only, never leaking
+    `id` into a downstream .to_numpy() call. Raises FileNotFoundError
+    naming the exact missing path if any file is absent.
     """
     representations: dict[str, dict[str, pd.DataFrame]] = {}
     for repr_name in repr_names:
@@ -66,10 +70,12 @@ def load_representations(
             if not path.exists():
                 raise FileNotFoundError(
                     f"Missing representation file for representation={repr_name!r}, "
-                    f"split={split!r}: {path} -- Step 3.3 (raw/classical) or Step 3.4 "
-                    "(ft_transformer/subtab/scarf) must produce it first"
+                    f"split={split!r}: {path} -- 04_feature_encoding.ipynb (raw/classical) "
+                    "or 05_embedding_paradigms.ipynb (ft_transformer/subtab/scarf) must "
+                    "produce it first"
                 )
-            representations[repr_name][split] = pd.read_parquet(path)
+            features_df, _id = load_representation_with_id(path)
+            representations[repr_name][split] = features_df
     return representations
 
 
