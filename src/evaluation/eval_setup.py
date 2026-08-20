@@ -15,7 +15,10 @@ import pandas as pd
 from src import config
 from src.helper import load_representation_with_id
 
-REPR_NAMES = ("raw", "classical", "ft_transformer", "subtab", "scarf")
+REPR_NAMES = (
+    "raw", "classical", "ft_transformer", "subtab", "scarf",
+    "ft_transformer_no_text", "subtab_no_text", "scarf_no_text",
+)
 EVAL_SPLIT = "test"
 SENSITIVE_COL = "original_language"
 TARGET_COL = "vote_average"
