@@ -6,16 +6,22 @@ label (eval_setup.py). Thin wrappers around sklearn.metrics.
 silhouette_score is subsampled (silhouette_sample_size, default
 DEFAULT_SILHOUETTE_SAMPLE_SIZE=200): its full-size pairwise-distance
 computation segfaults this environment on wide, real-size representation
-arrays. calinski_harabasz_score/davies_bouldin_score are unaffected and
-always run on the full array. run_silhouette_variance discloses how much
-a single 200-row draw can vary, by repeating it over several seeded
-draws and reporting the mean/std across them.
+arrays when BLAS runs single-threaded -- compute_clustering_metrics wraps
+just that call in threadpoolctl.threadpool_limits(limits=1) rather than
+pinning threads for the whole process, so the crash workaround doesn't
+leave every other BLAS-backed call (XGBoost fits, the rest of this
+notebook) running single-threaded too. calinski_harabasz_score/
+davies_bouldin_score are unaffected and always run on the full array,
+unpinned. run_silhouette_variance discloses how much a single 200-row
+draw can vary, by repeating it over several seeded draws and reporting
+the mean/std across them.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import threadpoolctl
 from sklearn.metrics import (
     calinski_harabasz_score,
     davies_bouldin_score,
@@ -48,12 +54,14 @@ def compute_clustering_metrics(
         f"X.shape[0]={X.shape[0]}, len(labels)={len(labels)}"
     )
     X = np.asarray(X, dtype=np.float64)
-    return {
-        "silhouette": float(
+    with threadpoolctl.threadpool_limits(limits=1):
+        silhouette = float(
             silhouette_score(
                 X, labels, sample_size=silhouette_sample_size, random_state=random_state
             )
-        ),
+        )
+    return {
+        "silhouette": silhouette,
         "calinski_harabasz": float(calinski_harabasz_score(X, labels)),
         "davies_bouldin": float(davies_bouldin_score(X, labels)),
     }
