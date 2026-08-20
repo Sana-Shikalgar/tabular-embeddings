@@ -104,14 +104,25 @@ def train_ft_transformer(
     shared_config: SharedTrainingConfig,
     models_dir: Path,
     seed: int = config.RANDOM_SEED,
+    include_text: bool = True,
+    paradigm_name: str = "ft_transformer",
 ) -> tuple[FTTransformerModel, TrainingLogger]:
     """Trains model against train_df/val_df, early-stopping on validation
-    MSE, restores the best-validation-epoch weights, and saves the
-    training curve via TrainingLogger. Returns (model, logger)."""
+    MSE, restores the best epoch's weights, and saves the loss curve.
+    include_text must match how model was constructed -- asserted below,
+    so a mismatch can't silently train on the wrong text setting.
+    paradigm_name sets where the loss curve is saved, so a text-free run
+    doesn't overwrite the text-included run's diagnostics. Returns
+    (model, logger)."""
+    assert model.ft_transformer.tokenizer.include_text == include_text, (
+        f"include_text={include_text} does not match model's own tokenizer.include_text="
+        f"{model.ft_transformer.tokenizer.include_text} -- model must be constructed with "
+        "the same include_text value passed here"
+    )
     rng = np.random.default_rng(seed)
-    train_batch = fitted_encoders.transform(train_df)
+    train_batch = fitted_encoders.transform(train_df, include_text=include_text)
     train_target = train_df[TARGET_COL].to_numpy(dtype=np.float32)
-    val_batch = fitted_encoders.transform(val_df)
+    val_batch = fitted_encoders.transform(val_df, include_text=include_text)
     val_target = val_df[TARGET_COL].to_numpy(dtype=np.float32)
 
     optimizer = _build_optimizer(model, ft_config)
@@ -141,6 +152,6 @@ def train_ft_transformer(
 
     model.load_state_dict(best_state_dict)
     print(f"Restored epoch {best_epoch}'s weights (val MSE: {best_val_loss:.4f})")
-    logger.save(models_dir, "ft_transformer")
+    logger.save(models_dir, paradigm_name)
 
     return model, logger

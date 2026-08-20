@@ -104,15 +104,12 @@ class SubtabListReducer:
 def _segment_width(
     name: str, fitted_encoders: FittedEncoders, list_reducers: dict, include_text: bool = True
 ) -> int:
-    """Returns one FLAT_VECTOR_SEGMENT_ORDER segment's column width,
-    derived from fitted_encoders/list_reducers alone -- no df/batch
-    needed. list_reducers is checked before column_groups.list_cols:
-    keywords/production_companies are list fields too, but take the SVD
-    path when present in list_reducers rather than the multi-hot path.
-    include_text=False rejects overview/original_title -- callers that
-    filter FLAT_VECTOR_SEGMENT_ORDER down before iterating should never
-    reach this branch, but it's guarded here too rather than silently
-    returning a width for an excluded field."""
+    """Returns one FLAT_VECTOR_SEGMENT_ORDER segment's column width, from
+    fitted_encoders/list_reducers alone. list_reducers is checked before
+    column_groups.list_cols, since keywords/production_companies take the
+    SVD path when present there instead of the multi-hot path.
+    include_text=False raises if asked for a text field's width, guarding
+    against a caller that forgot to filter it out first."""
     if name == "numeric":
         return fitted_encoders.dims["numeric"]
     if name == "original_language":
@@ -132,10 +129,9 @@ def flat_vector_segment_bounds(
     fitted_encoders: FittedEncoders, list_reducers: dict, include_text: bool = True
 ) -> dict[str, tuple[int, int]]:
     """Returns each FLAT_VECTOR_SEGMENT_ORDER segment's (start, end)
-    column range in build_flat_vector's output, without changing what
-    build_flat_vector itself returns. include_text=False excludes
-    overview/original_title from the iteration (and the returned dict)
-    -- FLAT_VECTOR_SEGMENT_ORDER itself is never mutated, only filtered
+    column range in build_flat_vector's output. include_text=False
+    excludes overview/original_title from the returned dict;
+    FLAT_VECTOR_SEGMENT_ORDER itself is never mutated, only filtered
     per-call."""
     segment_order = (
         FLAT_VECTOR_SEGMENT_ORDER
@@ -166,14 +162,11 @@ def build_flat_vector(
 ) -> np.ndarray:
     """Concatenates every fitted_encoders.transform(df) key into one flat,
     fixed-order array (FLAT_VECTOR_SEGMENT_ORDER) -- the reconstruction
-    target for SubTab's autoencoder. Numeric, one-hot language, and the
-    three small multi-hot list fields pass through as-is; keywords/
-    production_companies go through list_reducers' SVD instead of full
-    multi-hot; the two text fields pass through as their 768-d SBERT
-    vectors. include_text=False excludes overview/original_title from
-    the iteration (and from fitted_encoders.transform()'s own lookup)
-    -- FLAT_VECTOR_SEGMENT_ORDER itself is never mutated, only filtered
-    per-call."""
+    target for SubTab's autoencoder. Numeric/language/small list fields
+    pass through as-is; keywords/production_companies go through
+    list_reducers' SVD; text fields pass through as raw SBERT vectors.
+    include_text=False excludes both text fields from the vector
+    entirely."""
     batch = fitted_encoders.transform(df, include_text=include_text)
     segments: list[np.ndarray] = []
 
