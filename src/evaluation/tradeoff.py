@@ -18,10 +18,13 @@ def assemble_raw_table(
     """Combines one column from each source table into a single per-
     representation frame: silhouette, calinski_harabasz, davies_bouldin
     from clustering_table; agreement from interpretability_table's
-    attribution_agreement; delta_accuracy from fairness_table. Asserts all
+    attribution_agreement; delta_macro_f1 from fairness_table. Asserts all
     three inputs share the same row index/order first, so a column is
     never attributed to the wrong representation. fairness_table's NaN
-    delta_accuracy for "raw" is carried through unchanged.
+    delta_macro_f1 for "raw" is replaced with 0.0 -- M(raw) - M(raw) = 0
+    is a defined value, not missing data. Asserts the returned table has
+    no remaining NaN cells, naming the row/column of the first ones found
+    if it does.
     """
     assert clustering_table.index.equals(interpretability_table.index), (
         "clustering_table and interpretability_table do not share the same "
@@ -34,37 +37,48 @@ def assemble_raw_table(
         f"{fairness_table.index.tolist()}"
     )
 
-    return pd.DataFrame(
+    table = pd.DataFrame(
         {
             "silhouette": clustering_table["silhouette"],
             "calinski_harabasz": clustering_table["calinski_harabasz"],
             "davies_bouldin": clustering_table["davies_bouldin"],
             "agreement": interpretability_table["attribution_agreement"],
-            "delta_accuracy": fairness_table["delta_accuracy"],
+            "delta_macro_f1": fairness_table["delta_macro_f1"],
         },
         index=clustering_table.index,
     )
+    table.loc["raw", "delta_macro_f1"] = 0.0
+
+    nan_locations = [
+        f"row={row!r}, column={col!r}"
+        for col in table.columns
+        for row in table.index[table[col].isna()]
+    ]
+    assert not nan_locations, f"assemble_raw_table: unexpected NaN at {nan_locations}"
+
+    return table
 
 
 def normalize_metrics(raw_table: pd.DataFrame) -> pd.DataFrame:
     """Min-max scales raw_table to [0, 1] per column, oriented so 1 is
     always more favourable: silhouette/calinski_harabasz/agreement are
-    higher_better as-is; davies_bouldin and delta_accuracy (on its
+    higher_better as-is; davies_bouldin and delta_macro_f1 (on its
     absolute value) are flipped to lower_better. A zero-variance column
     returns 0.5 for every non-NaN row instead of dividing by zero.
-    "raw"'s NaN delta_accuracy is excluded from the column's min/max and
-    stays NaN in the output, never imputed.
+    assemble_raw_table already replaces "raw"'s delta_macro_f1 with 0.0,
+    so its abs() is 0 -- typically the column minimum, normalizing "raw"
+    to 1.0 (no amplification relative to itself, the best possible score).
     """
     direction = {
         "silhouette": "higher_better",
         "calinski_harabasz": "higher_better",
         "davies_bouldin": "lower_better",
         "agreement": "higher_better",
-        "delta_accuracy": "lower_better",
+        "delta_macro_f1": "lower_better",
     }
 
     working = raw_table.copy()
-    working["delta_accuracy"] = working["delta_accuracy"].abs()
+    working["delta_macro_f1"] = working["delta_macro_f1"].abs()
 
     normalized = pd.DataFrame(index=raw_table.index)
     for col, col_direction in direction.items():

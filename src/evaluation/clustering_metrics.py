@@ -7,7 +7,9 @@ silhouette_score is subsampled (silhouette_sample_size, default
 DEFAULT_SILHOUETTE_SAMPLE_SIZE=200): its full-size pairwise-distance
 computation segfaults this environment on wide, real-size representation
 arrays. calinski_harabasz_score/davies_bouldin_score are unaffected and
-always run on the full array.
+always run on the full array. run_silhouette_variance discloses how much
+a single 200-row draw can vary, by repeating it over several seeded
+draws and reporting the mean/std across them.
 """
 
 from __future__ import annotations
@@ -55,6 +57,32 @@ def compute_clustering_metrics(
         "calinski_harabasz": float(calinski_harabasz_score(X, labels)),
         "davies_bouldin": float(davies_bouldin_score(X, labels)),
     }
+
+
+def run_silhouette_variance(
+    X: np.ndarray,
+    labels: pd.Series | np.ndarray,
+    random_state: int,
+    n_draws: int = 20,
+    sample_size: int = 200,
+) -> dict[str, float]:
+    """Repeats silhouette_score over n_draws distinct sample_size-row
+    subsamples of one representation (draw i seeded with random_state +
+    i, so every draw samples different rows), and returns
+    {"mean": ..., "std": ...} across those n_draws scores -- discloses
+    how much compute_clustering_metrics's single 200-row silhouette draw
+    could have varied under a different seed.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    scores = [
+        float(
+            silhouette_score(
+                X, labels, sample_size=sample_size, random_state=random_state + i
+            )
+        )
+        for i in range(n_draws)
+    ]
+    return {"mean": float(np.mean(scores)), "std": float(np.std(scores))}
 
 
 def run_all(
