@@ -18,7 +18,8 @@ def assemble_raw_table(
     """Combines one column from each source table into a single per-
     representation frame: silhouette, calinski_harabasz, davies_bouldin
     from clustering_table; agreement from interpretability_table's
-    attribution_agreement; delta_macro_f1 from fairness_table. Asserts all
+    "spearman" column (attribution_agreement's Spearman correlation, not
+    its overlap_at_10); delta_macro_f1 from fairness_table. Asserts all
     three inputs share the same row index/order first, so a column is
     never attributed to the wrong representation. fairness_table's NaN
     delta_macro_f1 for "raw" is replaced with 0.0 -- M(raw) - M(raw) = 0
@@ -42,7 +43,7 @@ def assemble_raw_table(
             "silhouette": clustering_table["silhouette"],
             "calinski_harabasz": clustering_table["calinski_harabasz"],
             "davies_bouldin": clustering_table["davies_bouldin"],
-            "agreement": interpretability_table["attribution_agreement"],
+            "agreement": interpretability_table["spearman"],
             "delta_macro_f1": fairness_table["delta_macro_f1"],
         },
         index=clustering_table.index,

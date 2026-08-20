@@ -16,7 +16,6 @@ from src import config
 from src.helper import load_representation_with_id
 
 REPR_NAMES = ("raw", "classical", "ft_transformer", "subtab", "scarf")
-FIT_SPLIT = "train"
 EVAL_SPLIT = "test"
 SENSITIVE_COL = "original_language"
 TARGET_COL = "vote_average"
@@ -130,36 +129,33 @@ def assert_row_alignment(
 
 
 def derive_genre_label(
-    candidate_splits: dict[str, pd.DataFrame], fit_split: str = FIT_SPLIT
-) -> dict[str, pd.Series]:
-    """Derives each row's genre label as genres[0]. Empty-list rows are
-    filled with the most frequent first-listed genre in fit_split alone
-    (never derived from val/test), so the fallback value is a fixed
-    constant reused across every split. Prints how many rows in each split
-    needed the fallback.
+    candidate_splits: dict[str, pd.DataFrame],
+) -> tuple[dict[str, pd.Series], dict[str, pd.Series]]:
+    """Derives each row's genre label as genres[0]. A row with an empty
+    genres list has no first genre to derive -- rather than fabricating
+    one, this returns two parallel dicts: labels[split] (genres[0] where
+    available, NaN elsewhere) and valid_mask[split] (True where
+    labels[split] is real). A caller using labels[split] as a clustering
+    label must first filter both the label and its matching feature rows
+    to valid_mask[split] -- e.g. X[mask], labels[split][mask] -- since
+    NaN is not a usable label. Prints how many rows in each split have no
+    first genre and are excluded.
     """
-    first_genre_by_split: dict[str, pd.Series] = {
-        split: df[GENRE_COL].apply(lambda genres: genres[0] if len(genres) > 0 else None)
-        for split, df in candidate_splits.items()
-    }
-
-    non_null_fit = first_genre_by_split[fit_split].dropna()
-    assert not non_null_fit.empty, (
-        f"fit_split={fit_split!r} has no rows with a non-empty genres list -- "
-        "cannot derive a fallback genre from it"
-    )
-    fallback_genre = non_null_fit.value_counts().idxmax()
-
     labels: dict[str, pd.Series] = {}
-    for split, first_genre in first_genre_by_split.items():
-        n_fallback = int(first_genre.isna().sum())
-        print(
-            f"derive_genre_label: {split}: {n_fallback} row(s) used the "
-            f"fallback genre {fallback_genre!r}"
-        )
-        labels[split] = first_genre.fillna(fallback_genre)
+    valid_mask: dict[str, pd.Series] = {}
 
-    return labels
+    for split, df in candidate_splits.items():
+        first_genre = df[GENRE_COL].apply(lambda genres: genres[0] if len(genres) > 0 else None)
+        mask = first_genre.notna()
+        n_excluded = int((~mask).sum())
+        print(
+            f"derive_genre_label: {split}: {n_excluded} row(s) have no first "
+            "genre and are excluded from clustering labels"
+        )
+        labels[split] = first_genre
+        valid_mask[split] = mask
+
+    return labels, valid_mask
 
 
 def drop_sensitive_attribute_columns(df: pd.DataFrame, representation: str) -> pd.DataFrame:

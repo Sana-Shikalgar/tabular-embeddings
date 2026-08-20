@@ -85,24 +85,32 @@ def summarize_lime(lime_explanations: list, top_k: int = 10) -> pd.Series:
     return means.sort_values(ascending=False).head(top_k)
 
 
-def attribution_agreement(shap_summary: pd.Series, lime_summary: pd.Series, top_k: int = 10) -> float:
-    """Returns the Spearman correlation between shap_summary's and
-    lime_summary's feature rankings over the union of their top_k
-    features (a feature missing from one summary is treated as 0 there;
-    ties broken alphabetically). A single per-representation agreement
-    score for the Table 3.3 trade-off view -- it does not surface WHERE
-    the two methods disagree.
+def attribution_agreement(shap_summary: pd.Series, lime_summary: pd.Series) -> dict[str, float]:
+    """Returns {"spearman": ..., "overlap_at_10": ...} comparing the full
+    (untruncated) shap_summary/lime_summary Series -- callers should pass
+    everything summarize_shap/summarize_lime can produce, not a
+    pre-truncated top_k, so real values are compared rather than an
+    artificial rank structure.
+
+    "spearman" is scipy.stats.spearmanr's correlation computed directly
+    on the two summaries' own values, reindexed to the union of both
+    summaries' features; a feature absent from one summary is filled
+    with 0.0 there (genuinely missing, not a rank placeholder).
+    spearmanr handles tied values internally, so no manual tiebreak is
+    needed. "overlap_at_10" is the size of the intersection of the two
+    summaries' own top-10 feature sets (0-10) -- a plain feature-set
+    agreement, independent of value magnitude or rank.
+
+    A single per-representation agreement score for the Table 3.3
+    trade-off view -- it does not surface WHERE the two methods disagree.
     """
-    shap_top = shap_summary.head(top_k)
-    lime_top = lime_summary.head(top_k)
-    union = sorted(set(shap_top.index) | set(lime_top.index))
+    union = shap_summary.index.union(lime_summary.index)
+    shap_aligned = shap_summary.reindex(union).fillna(0.0)
+    lime_aligned = lime_summary.reindex(union).fillna(0.0)
+    spearman = spearmanr(shap_aligned, lime_aligned).correlation
 
-    def _ranks(summary: pd.Series) -> list[int]:
-        values = {f: summary.get(f, 0.0) for f in union}
-        order = sorted(union, key=lambda f: (-values[f], f))
-        rank_by_feature = {f: rank + 1 for rank, f in enumerate(order)}
-        return [rank_by_feature[f] for f in union]
+    shap_top10 = set(shap_summary.head(10).index)
+    lime_top10 = set(lime_summary.head(10).index)
+    overlap_at_10 = len(shap_top10 & lime_top10)
 
-    shap_ranks = _ranks(shap_top)
-    lime_ranks = _ranks(lime_top)
-    return spearmanr(shap_ranks, lime_ranks).correlation
+    return {"spearman": float(spearman), "overlap_at_10": overlap_at_10}
