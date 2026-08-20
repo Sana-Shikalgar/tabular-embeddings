@@ -51,19 +51,23 @@ def load_representations(
     models_dir: Path,
     repr_names: tuple[str, ...] = REPR_NAMES,
     splits: tuple[str, ...] = config.SPLIT_NAMES,
-) -> dict[str, dict[str, pd.DataFrame]]:
+) -> tuple[dict[str, dict[str, pd.DataFrame]], dict[str, dict[str, pd.Series]]]:
     """Loads every representation's saved (N, d) feature table from
     models_dir / {representation} / f"{split}.parquet", one row per input
     row in the source split's own order. Every file carries `id` as its
     first column (the save_representation_with_id convention); this
     function strips it back out via load_representation_with_id so
     representations[repr_name][split] is features only, never leaking
-    `id` into a downstream .to_numpy() call. Raises FileNotFoundError
-    naming the exact missing path if any file is absent.
+    `id` into a downstream .to_numpy() call. The stripped `id` column is
+    returned separately as ids[repr_name][split], for row-alignment
+    checks (assert_row_alignment). Raises FileNotFoundError naming the
+    exact missing path if any file is absent.
     """
     representations: dict[str, dict[str, pd.DataFrame]] = {}
+    ids: dict[str, dict[str, pd.Series]] = {}
     for repr_name in repr_names:
         representations[repr_name] = {}
+        ids[repr_name] = {}
         for split in splits:
             path = models_dir / repr_name / f"{split}.parquet"
             if not path.exists():
@@ -73,9 +77,10 @@ def load_representations(
                     "or 05_embedding_paradigms.ipynb (ft_transformer/subtab/scarf) must "
                     "produce it first"
                 )
-            features_df, _id = load_representation_with_id(path)
+            features_df, id_series = load_representation_with_id(path)
             representations[repr_name][split] = features_df
-    return representations
+            ids[repr_name][split] = id_series
+    return representations, ids
 
 
 def load_candidate_splits(
@@ -99,14 +104,20 @@ def load_candidate_splits(
 
 def assert_row_alignment(
     representations: dict[str, dict[str, pd.DataFrame]],
+    ids: dict[str, dict[str, pd.Series]],
     candidate_splits: dict[str, pd.DataFrame],
     splits: tuple[str, ...] = config.SPLIT_NAMES,
 ) -> None:
     """Asserts every representation frame is in the same row order as
     candidate_splits[split]: first checks row counts match, then compares
-    raw's "runtime" column elementwise against candidate_splits' own
-    "runtime" (np.allclose, since it's an unstandardised float passthrough)
-    as a genuine row-order proof, not just a length check. Raises
+    every representation's own `id` column (ids[repr_name][split], from
+    load_representations) elementwise against candidate_splits[split]'s
+    "id" column for exact equality (id is not a float, so no tolerance is
+    appropriate). This replaces the older check, which only compared
+    raw's "runtime" column via np.allclose -- an indirect proxy for one
+    representation. Comparing `id` directly for every representation in
+    REPR_NAMES is a strictly stronger, more direct proof of row order, so
+    the runtime check was removed rather than kept alongside it. Raises
     AssertionError naming the split and representation on mismatch.
     """
     for split in splits:
@@ -119,13 +130,14 @@ def assert_row_alignment(
             )
 
     for split in splits:
-        raw_runtime = representations["raw"][split]["runtime"].to_numpy()
-        candidate_runtime = candidate_splits[split]["runtime"].to_numpy()
-        assert np.allclose(raw_runtime, candidate_runtime), (
-            f"row-order mismatch for representation='raw', split={split!r}: "
-            "raw's 'runtime' column does not elementwise match candidate_splits' "
-            "'runtime' column -- the two frames are not in the same row order"
-        )
+        candidate_ids = candidate_splits[split]["id"].to_numpy()
+        for repr_name in ids:
+            repr_ids = ids[repr_name][split].to_numpy()
+            assert np.array_equal(repr_ids, candidate_ids), (
+                f"row-order mismatch for representation={repr_name!r}, split={split!r}: "
+                "its 'id' column does not exactly match candidate_splits' 'id' column -- "
+                "the two frames are not in the same row order"
+            )
 
 
 def derive_genre_label(
