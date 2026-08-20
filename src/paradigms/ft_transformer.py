@@ -116,12 +116,16 @@ class FTTransformer(nn.Module):
     encodes the sequence with a stack of pre-norm Transformer encoder
     layers."""
 
-    def __init__(self, fitted_encoders: FittedEncoders, config: FTTransformerConfig):
+    def __init__(
+        self, fitted_encoders: FittedEncoders, config: FTTransformerConfig, include_text: bool = True
+    ):
         """Builds the feature tokenizer, [CLS] token, and Transformer
-        encoder stack from fitted_encoders and config."""
+        encoder stack from fitted_encoders and config. include_text=False
+        builds a tokenizer with no text_projections, for a genuine
+        text-free retrain rather than an inference-time skip."""
         super().__init__()
         self.config = config
-        self.tokenizer = FeatureTokenizer(fitted_encoders, d_token=config.d_token)
+        self.tokenizer = FeatureTokenizer(fitted_encoders, d_token=config.d_token, include_text=include_text)
         self.cls_token = nn.Parameter(torch.zeros(1, 1, config.d_token))
 
         encoder_layer = nn.TransformerEncoderLayer(
@@ -154,11 +158,14 @@ class FTTransformerModel(nn.Module):
     [CLS] representation used downstream, .forward() adds the regression
     head for training."""
 
-    def __init__(self, fitted_encoders: FittedEncoders, config: FTTransformerConfig):
+    def __init__(
+        self, fitted_encoders: FittedEncoders, config: FTTransformerConfig, include_text: bool = True
+    ):
         """Builds the FTTransformer backbone and a LayerNorm/ReLU/Linear
-        prediction head."""
+        prediction head. include_text=False builds a text-free backbone
+        (see FTTransformer)."""
         super().__init__()
-        self.ft_transformer = FTTransformer(fitted_encoders, config)
+        self.ft_transformer = FTTransformer(fitted_encoders, config, include_text=include_text)
         self.prediction_head = nn.Sequential(
             nn.LayerNorm(config.d_token), nn.ReLU(), nn.Linear(config.d_token, 1)
         )

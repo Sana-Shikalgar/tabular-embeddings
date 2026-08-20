@@ -36,16 +36,16 @@ def _run_batch(
     scarf_config: SCARFConfig,
     rng: np.random.Generator,
     marginals: dict[str, np.ndarray] | None = None,
+    include_text: bool = True,
     text_vectors: dict[str, np.ndarray] | None = None,
 ) -> torch.Tensor:
-    """Builds one batch's clean/corrupted views (resampling corrupted
-    values from marginals when given, otherwise from batch_df itself;
-    using text_vectors -- this batch's slice of the once-precomputed
-    overview/original_title arrays -- instead of re-transforming text,
-    when given) and returns their NT-Xent loss."""
+    """Builds one batch's clean/corrupted views and returns their NT-Xent
+    loss. include_text=False builds a text-free view regardless of
+    text_vectors; text_vectors, when include_text is True, supplies this
+    batch's slice of precomputed text instead of re-transforming it."""
     clean_vec, corrupted_vec = build_scarf_views(
         batch_df, fitted_encoders, tables, scarf_config.corruption_rate, rng,
-        marginals=marginals, text_vectors=text_vectors,
+        marginals=marginals, include_text=include_text, text_vectors=text_vectors,
     )
     z_clean = head(encoder(clean_vec))
     z_corrupted = head(encoder(corrupted_vec))
@@ -62,14 +62,14 @@ def _run_train_epoch(
     rng: np.random.Generator,
     optimizer: torch.optim.Optimizer,
     marginals: dict[str, np.ndarray] | None = None,
+    include_text: bool = True,
     text_vectors: dict[str, np.ndarray] | None = None,
 ) -> float:
     """One shuffled pass (via rng) over train_df, updating tables/encoder/
-    head on each batch's loss. text_vectors, when given, is train_df's
-    full precomputed overview/original_title arrays (row-order-aligned
-    with train_df), sliced per batch by that batch's row indices instead
-    of being re-transformed every call. Returns the row-count-weighted
-    mean NT-Xent loss across batches."""
+    head on each batch's loss. include_text=False trains a text-free view
+    regardless of text_vectors; text_vectors, when include_text is True,
+    is train_df's precomputed text arrays, sliced per batch instead of
+    re-transformed. Returns the row-count-weighted mean NT-Xent loss."""
     n_rows = len(train_df)
     row_order = rng.permutation(n_rows)
     tables.train()
@@ -88,7 +88,7 @@ def _run_train_epoch(
         optimizer.zero_grad()
         loss = _run_batch(
             tables, encoder, head, batch_df, fitted_encoders, scarf_config, rng,
-            marginals=marginals, text_vectors=batch_text,
+            marginals=marginals, include_text=include_text, text_vectors=batch_text,
         )
         loss.backward()
         optimizer.step()
@@ -108,16 +108,15 @@ def _run_validation(
     scarf_config: SCARFConfig,
     seed: int,
     marginals: dict[str, np.ndarray] | None = None,
+    include_text: bool = True,
     text_vectors: dict[str, np.ndarray] | None = None,
 ) -> float:
     """Fixed-order pass over val_df, computing NT-Xent loss without
-    gradient updates. text_vectors, when given, is val_df's full
-    precomputed overview/original_title arrays, sliced per batch instead
-    of being re-transformed every call. Builds its own
-    np.random.default_rng(seed) internally on every call -- the same
-    seed every time, so every validation pass corrupts identically --
-    rather than sharing (and mutating) the training loop's own rng.
-    Returns the row-count-weighted mean loss across batches."""
+    gradient updates. include_text=False evaluates a text-free view
+    regardless of text_vectors. Builds its own np.random.default_rng(seed)
+    each call -- the same seed every time, so every validation pass
+    corrupts identically -- rather than sharing the training loop's rng.
+    Returns the row-count-weighted mean loss."""
     rng = np.random.default_rng(seed)
     n_rows = len(val_df)
     tables.eval()
@@ -135,7 +134,7 @@ def _run_validation(
             )
             loss = _run_batch(
                 tables, encoder, head, batch_df, fitted_encoders, scarf_config, rng,
-                marginals=marginals, text_vectors=batch_text,
+                marginals=marginals, include_text=include_text, text_vectors=batch_text,
             )
 
             total_loss += loss.item() * len(batch_df)
@@ -155,11 +154,17 @@ def train_scarf(
     shared_config: SharedTrainingConfig,
     models_dir: Path,
     seed: int = config.RANDOM_SEED,
+    include_text: bool = True,
+    paradigm_name: str = "scarf",
 ) -> tuple[ScarfEmbeddingTables, ScarfEncoder, ScarfProjectionHead, TrainingLogger]:
     """Trains tables/encoder/head against train_df/val_df, early-stopping
-    on validation loss, restores the best-validation-epoch weights, and
-    saves the training curve via TrainingLogger. Returns
-    (tables, encoder, head, logger)."""
+    on validation loss, restores the best epoch's weights, and saves the
+    loss curve. include_text=False trains text-free throughout and skips
+    precomputing text (encoder/tables must already be sized for a
+    text-free input_dim -- a mismatch surfaces as a matmul shape error,
+    not checked here). paradigm_name sets where the loss curve is saved,
+    so a text-free run doesn't overwrite the text-included run's
+    diagnostics. Returns (tables, encoder, head, logger)."""
     rng = np.random.default_rng(seed)
 
     # Fixed once from train_df, before the epoch loop -- every batch, every
@@ -174,11 +179,16 @@ def train_scarf(
     # batch's clean/corrupted view, every epoch -- computed once here via
     # one include_text=True transform() per df, then reused (sliced per
     # batch) instead of being re-derived by every batch's own transform()
-    # call inside the loop.
-    train_text_full = fitted_encoders.transform(train_df, include_text=True)
-    train_text = {field: train_text_full[field] for field in TEXT_FIELDS}
-    val_text_full = fitted_encoders.transform(val_df, include_text=True)
-    val_text = {field: val_text_full[field] for field in TEXT_FIELDS}
+    # call inside the loop. Skipped entirely when include_text=False --
+    # there is nothing to precompute or reuse.
+    if include_text:
+        train_text_full = fitted_encoders.transform(train_df, include_text=True)
+        train_text = {field: train_text_full[field] for field in TEXT_FIELDS}
+        val_text_full = fitted_encoders.transform(val_df, include_text=True)
+        val_text = {field: val_text_full[field] for field in TEXT_FIELDS}
+    else:
+        train_text = None
+        val_text = None
 
     optimizer = torch.optim.Adam(
         itertools.chain(tables.parameters(), encoder.parameters(), head.parameters()),
@@ -194,11 +204,11 @@ def train_scarf(
     for epoch in range(1, shared_config.max_epochs + 1):
         train_loss = _run_train_epoch(
             tables, encoder, head, train_df, fitted_encoders, scarf_config, rng, optimizer,
-            marginals=marginals, text_vectors=train_text,
+            marginals=marginals, include_text=include_text, text_vectors=train_text,
         )
         val_loss = _run_validation(
             tables, encoder, head, val_df, fitted_encoders, scarf_config, seed,
-            marginals=marginals, text_vectors=val_text,
+            marginals=marginals, include_text=include_text, text_vectors=val_text,
         )
         logger.log(epoch, train_loss, val_loss)
 
@@ -220,6 +230,6 @@ def train_scarf(
     encoder.load_state_dict(best_state["encoder"])
     head.load_state_dict(best_state["head"])
     print(f"Restored epoch {best_epoch}'s weights (val NT-Xent: {best_val_loss:.4f})")
-    logger.save(models_dir, "scarf")
+    logger.save(models_dir, paradigm_name)
 
     return tables, encoder, head, logger

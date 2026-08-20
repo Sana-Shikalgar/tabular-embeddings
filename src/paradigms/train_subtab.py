@@ -105,19 +105,29 @@ def train_subtab(
     shared_config: SharedTrainingConfig,
     models_dir: Path,
     seed: int = config.RANDOM_SEED,
+    include_text: bool = True,
+    paradigm_name: str = "subtab",
 ) -> tuple[SubTabAutoencoder, TrainingLogger, list[dict[str, float]]]:
     """Trains model against train_df/val_df, early-stopping on validation
-    L_r, restores the best-validation-epoch weights, and saves the
-    training curve via TrainingLogger. Returns
+    L_r, restores the best epoch's weights, and saves the loss curve.
+    include_text=False builds a text-free reconstruction target, asserted
+    below to match model's own full_width. paradigm_name sets where the
+    loss curve is saved, so a text-free run doesn't overwrite the
+    text-included run's diagnostics. Returns
     (model, logger, val_segment_mse)."""
     rng = np.random.default_rng(seed)
-    train_flat = build_flat_vector(train_df, fitted_encoders, list_reducers)
-    val_flat = build_flat_vector(val_df, fitted_encoders, list_reducers)
+    train_flat = build_flat_vector(train_df, fitted_encoders, list_reducers, include_text=include_text)
+    val_flat = build_flat_vector(val_df, fitted_encoders, list_reducers, include_text=include_text)
     full_width = train_flat.shape[1]
+    assert full_width == model.decoder[-1].out_features, (
+        f"train_flat width ({full_width}) does not match model's own full_width "
+        f"({model.decoder[-1].out_features}) -- model must be constructed with a "
+        "full_width consistent with the include_text value passed here"
+    )
 
     subset_arrays = make_column_subsets(full_width, subtab_config.n_subsets, subtab_config.overlap)
     subsets = [torch.from_numpy(s).long() for s in subset_arrays]
-    segment_bounds = flat_vector_segment_bounds(fitted_encoders, list_reducers)
+    segment_bounds = flat_vector_segment_bounds(fitted_encoders, list_reducers, include_text=include_text)
 
     train_full = torch.from_numpy(train_flat).float()
     val_full = torch.from_numpy(val_flat).float()
@@ -163,6 +173,6 @@ def train_subtab(
     print("  at restored epoch, per-segment MSE:")
     for name, mse in restored_segment_mse.items():
         print(f"    {name}: {mse:.4f}")
-    logger.save(models_dir, "subtab")
+    logger.save(models_dir, paradigm_name)
 
     return model, logger, val_segment_mse
