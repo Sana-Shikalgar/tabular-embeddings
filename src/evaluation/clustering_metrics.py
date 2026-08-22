@@ -98,18 +98,20 @@ def run_all(
     labels: pd.Series | np.ndarray,
     random_state: int,
     silhouette_sample_size: int | None = DEFAULT_SILHOUETTE_SAMPLE_SIZE,
+    repr_names: tuple[str, ...] = REPR_NAMES,
 ) -> pd.DataFrame:
     """Runs compute_clustering_metrics for every representation in
-    eval_setup.REPR_NAMES against the same labels, returning one row per
-    representation (index = representation name). Raises KeyError naming
-    any REPR_NAMES entry missing from representations.
+    repr_names (default eval_setup.REPR_NAMES) against the same labels,
+    returning one row per representation (index = representation name).
+    Raises KeyError naming any repr_names entry missing from
+    representations.
     """
     rows: dict[str, dict[str, float]] = {}
-    for repr_name in REPR_NAMES:
+    for repr_name in repr_names:
         if repr_name not in representations:
             raise KeyError(
                 f"run_all: representations is missing an entry for {repr_name!r} "
-                f"(expected one for every eval_setup.REPR_NAMES entry: {REPR_NAMES})"
+                f"(expected one for every repr_names entry: {repr_names})"
             )
         rows[repr_name] = compute_clustering_metrics(
             representations[repr_name], labels, random_state, silhouette_sample_size
