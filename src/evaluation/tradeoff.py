@@ -63,12 +63,12 @@ def assemble_raw_table(
 def normalize_metrics(raw_table: pd.DataFrame) -> pd.DataFrame:
     """Min-max scales raw_table to [0, 1] per column, oriented so 1 is
     always more favourable: silhouette/calinski_harabasz/agreement are
-    higher_better as-is; davies_bouldin and delta_macro_f1 (on its
-    absolute value) are flipped to lower_better. A zero-variance column
-    returns 0.5 for every non-NaN row instead of dividing by zero.
-    assemble_raw_table already replaces "raw"'s delta_macro_f1 with 0.0,
-    so its abs() is 0 -- typically the column minimum, normalizing "raw"
-    to 1.0 (no amplification relative to itself, the best possible score).
+    higher_better as-is; davies_bouldin and delta_macro_f1 (signed, not
+    absolute value) are flipped to lower_better. Since delta_macro_f1 is
+    signed, "raw"'s 0.0 (set by assemble_raw_table) does not guarantee a
+    1.0 score here -- a more negative delta_macro_f1 elsewhere outscores
+    it. A zero-variance column returns 0.5 for every non-NaN row instead
+    of dividing by zero.
     """
     direction = {
         "silhouette": "higher_better",
@@ -79,7 +79,6 @@ def normalize_metrics(raw_table: pd.DataFrame) -> pd.DataFrame:
     }
 
     working = raw_table.copy()
-    working["delta_macro_f1"] = working["delta_macro_f1"].abs()
 
     normalized = pd.DataFrame(index=raw_table.index)
     for col, col_direction in direction.items():

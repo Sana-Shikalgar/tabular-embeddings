@@ -50,3 +50,78 @@ Figures:
 
 ---
 
+## 06 Evaluation Protocol: TMDB -- summary (2026-08-23 10:40)
+
+- **Representations compared**: ['raw', 'classical', 'ft_transformer', 'subtab', 'scarf']
+- **Row alignment**: id-verified for all 5 representations across train=8403, val=1050, test=1051
+- **Genre label exclusions (no first genre)**: {'train': 55, 'val': 9, 'test': 9}
+- **Sensitive-attribute columns dropped (before -> after)**: {'raw': '20 -> 19', 'classical': '4286 -> 4279'}
+- **Table 4.2 clustering metrics**: {'raw': {'silhouette': -0.298, 'calinski_harabasz': 5.1292, 'davies_bouldin': 9.8685}, 'classical': {'silhouette': -0.0851, 'calinski_harabasz': 5.5541, 'davies_bouldin': 5.0813}, 'ft_transformer': {'silhouette': -0.2791, 'calinski_harabasz': 5.2306, 'davies_bouldin': 7.9002}, 'subtab': {'silhouette': -0.1189, 'calinski_harabasz': 9.6989, 'davies_bouldin': 5.1436}, 'scarf': {'silhouette': -0.2649, 'calinski_harabasz': 3.7025, 'davies_bouldin': 8.8613}}
+- **Silhouette subsample variance (mean/std over 20 draws)**: {'raw': {'mean': -0.3881, 'std': 0.0353}, 'classical': {'mean': -0.0987, 'std': 0.0281}, 'ft_transformer': {'mean': -0.2829, 'std': 0.0399}, 'subtab': {'mean': -0.1217, 'std': 0.0139}, 'scarf': {'mean': -0.3206, 'std': 0.0493}}
+- **Standardisation scale-artefact check (raw silhouette, as-is vs standardised)**: {'as-is': -0.298, 'standardised': -0.2206}
+- **t-SNE params**: {'perplexity': 30, 'learning_rate': 200}
+- **Host regressor scores (r2/mae)**: {'raw': {'r2': 0.4346, 'mae': 0.6401}, 'classical': {'r2': 0.5068, 'mae': 0.5928}, 'ft_transformer': {'r2': 0.3217, 'mae': 0.682}, 'subtab': {'r2': 0.3127, 'mae': 0.6971}, 'scarf': {'r2': -0.0017, 'mae': 0.9207}}
+- **SHAP/LIME agreement (spearman/overlap_at_10)**: {'raw': {'spearman': 0.8831, 'overlap_at_10': 9}, 'classical': {'spearman': 0.2812, 'overlap_at_10': 7}, 'ft_transformer': {'spearman': 0.2973, 'overlap_at_10': 7}, 'subtab': {'spearman': 0.0946, 'overlap_at_10': 2}, 'scarf': {'spearman': 0.0372, 'overlap_at_10': 3}}
+- **Lowest SHAP/LIME agreement**: scarf -- disagreeing features: ['dim_107', 'dim_113', 'dim_248', 'dim_254', 'dim_88', 'dim_9']
+- **y_lang['test'] majority-class proportion**: 0.7755
+- **Recoverability/fairness (accuracy/macro_f1/delta_accuracy/delta_macro_f1)**: {'raw': {'accuracy': 0.8868, 'macro_f1': 0.5289, 'delta_accuracy': nan, 'delta_macro_f1': nan}, 'classical': {'accuracy': 0.9791, 'macro_f1': 0.9581, 'delta_accuracy': 0.0923, 'delta_macro_f1': 0.4293}, 'ft_transformer': {'accuracy': 0.9229, 'macro_f1': 0.727, 'delta_accuracy': 0.0362, 'delta_macro_f1': 0.1982}, 'subtab': {'accuracy': 0.9496, 'macro_f1': 0.8148, 'delta_accuracy': 0.0628, 'delta_macro_f1': 0.286}, 'scarf': {'accuracy': 0.7697, 'macro_f1': 0.1864, 'delta_accuracy': -0.117, 'delta_macro_f1': -0.3425}}
+- **release_year vs original_language (Kruskal-Wallis H/p)**: {'train': {'H': np.float64(433.72), 'p': np.float64(1.5903771193653252e-91)}, 'test': {'H': np.float64(95.04), 'p': np.float64(5.860728813995319e-19)}}
+- **Trade-off table (raw)**: {'raw': {'silhouette': -0.298, 'calinski_harabasz': 5.1292, 'davies_bouldin': 9.8685, 'agreement': 0.8831, 'delta_macro_f1': 0.0}, 'classical': {'silhouette': -0.0851, 'calinski_harabasz': 5.5541, 'davies_bouldin': 5.0813, 'agreement': 0.2812, 'delta_macro_f1': 0.4293}, 'ft_transformer': {'silhouette': -0.2791, 'calinski_harabasz': 5.2306, 'davies_bouldin': 7.9002, 'agreement': 0.2973, 'delta_macro_f1': 0.1982}, 'subtab': {'silhouette': -0.1189, 'calinski_harabasz': 9.6989, 'davies_bouldin': 5.1436, 'agreement': 0.0946, 'delta_macro_f1': 0.286}, 'scarf': {'silhouette': -0.2649, 'calinski_harabasz': 3.7025, 'davies_bouldin': 8.8613, 'agreement': 0.0372, 'delta_macro_f1': -0.3425}}
+- **Trade-off table (normalized)**: {'raw': {'silhouette': 0.0, 'calinski_harabasz': 0.2379, 'davies_bouldin': 0.0, 'agreement': 1.0, 'delta_macro_f1': 0.5562}, 'classical': {'silhouette': 1.0, 'calinski_harabasz': 0.3088, 'davies_bouldin': 1.0, 'agreement': 0.2884, 'delta_macro_f1': 0.0}, 'ft_transformer': {'silhouette': 0.0886, 'calinski_harabasz': 0.2548, 'davies_bouldin': 0.4112, 'agreement': 0.3075, 'delta_macro_f1': 0.2994}, 'subtab': {'silhouette': 0.8415, 'calinski_harabasz': 1.0, 'davies_bouldin': 0.987, 'agreement': 0.0679, 'delta_macro_f1': 0.1857}, 'scarf': {'silhouette': 0.1553, 'calinski_harabasz': 0.0, 'davies_bouldin': 0.2104, 'agreement': 0.0, 'delta_macro_f1': 1.0}}
+- **Saved outputs**: C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\clustering_metrics.csv, C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\raw_tradeoff_metrics.csv, C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\normalized_tradeoff_metrics.csv
+
+Figures:
+- `reports/figures/06/06_tsne_grid.png`
+
+---
+
+## 06 Evaluation Protocol: TMDB -- summary (2026-08-23 11:15)
+
+- **Representations compared**: ['raw', 'classical', 'ft_transformer', 'subtab', 'scarf']
+- **Row alignment**: id-verified for all 5 representations across train=8403, val=1050, test=1051
+- **Genre label exclusions (no first genre)**: {'train': 55, 'val': 9, 'test': 9}
+- **Sensitive-attribute columns dropped (before -> after)**: {'raw': '20 -> 19', 'classical': '4286 -> 4279'}
+- **Table 4.2 clustering metrics**: {'raw': {'silhouette': -0.298, 'calinski_harabasz': 5.1292, 'davies_bouldin': 9.8685}, 'classical': {'silhouette': -0.0851, 'calinski_harabasz': 5.5541, 'davies_bouldin': 5.0813}, 'ft_transformer': {'silhouette': -0.2791, 'calinski_harabasz': 5.2306, 'davies_bouldin': 7.9002}, 'subtab': {'silhouette': -0.1189, 'calinski_harabasz': 9.6989, 'davies_bouldin': 5.1436}, 'scarf': {'silhouette': -0.2649, 'calinski_harabasz': 3.7025, 'davies_bouldin': 8.8613}}
+- **Silhouette subsample variance (mean/std over 20 draws)**: {'raw': {'mean': -0.3881, 'std': 0.0353}, 'classical': {'mean': -0.0987, 'std': 0.0281}, 'ft_transformer': {'mean': -0.2829, 'std': 0.0399}, 'subtab': {'mean': -0.1217, 'std': 0.0139}, 'scarf': {'mean': -0.3206, 'std': 0.0493}}
+- **Standardisation scale-artefact check (raw silhouette, as-is vs standardised)**: {'as-is': -0.298, 'standardised': -0.2206}
+- **t-SNE params**: {'perplexity': 30, 'learning_rate': 200}
+- **Host regressor scores (r2/mae)**: {'raw': {'r2': 0.4346, 'mae': 0.6401}, 'classical': {'r2': 0.5068, 'mae': 0.5928}, 'ft_transformer': {'r2': 0.3217, 'mae': 0.682}, 'subtab': {'r2': 0.3127, 'mae': 0.6971}, 'scarf': {'r2': -0.0017, 'mae': 0.9207}}
+- **SHAP/LIME agreement (spearman/overlap_at_10)**: {'raw': {'spearman': 0.8831, 'overlap_at_10': 9}, 'classical': {'spearman': 0.2812, 'overlap_at_10': 7}, 'ft_transformer': {'spearman': 0.2973, 'overlap_at_10': 7}, 'subtab': {'spearman': 0.0946, 'overlap_at_10': 2}, 'scarf': {'spearman': 0.0372, 'overlap_at_10': 3}}
+- **Lowest SHAP/LIME agreement**: scarf -- disagreeing features: ['dim_107', 'dim_113', 'dim_248', 'dim_254', 'dim_88', 'dim_9']
+- **y_lang['test'] majority-class proportion**: 0.7755
+- **Recoverability/fairness (accuracy/macro_f1/delta_accuracy/delta_macro_f1)**: {'raw': {'accuracy': 0.8868, 'macro_f1': 0.5289, 'delta_accuracy': nan, 'delta_macro_f1': nan}, 'classical': {'accuracy': 0.9791, 'macro_f1': 0.9581, 'delta_accuracy': 0.0923, 'delta_macro_f1': 0.4293}, 'ft_transformer': {'accuracy': 0.9229, 'macro_f1': 0.727, 'delta_accuracy': 0.0362, 'delta_macro_f1': 0.1982}, 'subtab': {'accuracy': 0.9496, 'macro_f1': 0.8148, 'delta_accuracy': 0.0628, 'delta_macro_f1': 0.286}, 'scarf': {'accuracy': 0.7697, 'macro_f1': 0.1864, 'delta_accuracy': -0.117, 'delta_macro_f1': -0.3425}}
+- **release_year vs original_language (Kruskal-Wallis H/p)**: {'train': {'H': np.float64(433.72), 'p': np.float64(1.5903771193653252e-91)}, 'test': {'H': np.float64(95.04), 'p': np.float64(5.860728813995319e-19)}}
+- **Trade-off table (raw)**: {'raw': {'silhouette': -0.298, 'calinski_harabasz': 5.1292, 'davies_bouldin': 9.8685, 'agreement': 0.8831, 'delta_macro_f1': 0.0}, 'classical': {'silhouette': -0.0851, 'calinski_harabasz': 5.5541, 'davies_bouldin': 5.0813, 'agreement': 0.2812, 'delta_macro_f1': 0.4293}, 'ft_transformer': {'silhouette': -0.2791, 'calinski_harabasz': 5.2306, 'davies_bouldin': 7.9002, 'agreement': 0.2973, 'delta_macro_f1': 0.1982}, 'subtab': {'silhouette': -0.1189, 'calinski_harabasz': 9.6989, 'davies_bouldin': 5.1436, 'agreement': 0.0946, 'delta_macro_f1': 0.286}, 'scarf': {'silhouette': -0.2649, 'calinski_harabasz': 3.7025, 'davies_bouldin': 8.8613, 'agreement': 0.0372, 'delta_macro_f1': -0.3425}}
+- **Trade-off table (normalized)**: {'raw': {'silhouette': 0.0, 'calinski_harabasz': 0.2379, 'davies_bouldin': 0.0, 'agreement': 1.0, 'delta_macro_f1': 0.5562}, 'classical': {'silhouette': 1.0, 'calinski_harabasz': 0.3088, 'davies_bouldin': 1.0, 'agreement': 0.2884, 'delta_macro_f1': 0.0}, 'ft_transformer': {'silhouette': 0.0886, 'calinski_harabasz': 0.2548, 'davies_bouldin': 0.4112, 'agreement': 0.3075, 'delta_macro_f1': 0.2994}, 'subtab': {'silhouette': 0.8415, 'calinski_harabasz': 1.0, 'davies_bouldin': 0.987, 'agreement': 0.0679, 'delta_macro_f1': 0.1857}, 'scarf': {'silhouette': 0.1553, 'calinski_harabasz': 0.0, 'davies_bouldin': 0.2104, 'agreement': 0.0, 'delta_macro_f1': 1.0}}
+- **Saved outputs**: C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\clustering_metrics.csv, C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\raw_tradeoff_metrics.csv, C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\normalized_tradeoff_metrics.csv
+
+Figures:
+- `reports/figures/06/06_tsne_grid.png`
+
+---
+
+## 06 Evaluation Protocol: TMDB -- summary (2026-08-24 10:19)
+
+- **Representations compared**: ['raw', 'classical', 'ft_transformer', 'subtab', 'scarf']
+- **Row alignment**: id-verified for all 5 representations across train=8403, val=1050, test=1051
+- **Genre label exclusions (no first genre)**: {'train': 55, 'val': 9, 'test': 9}
+- **Sensitive-attribute columns dropped (before -> after)**: {'raw': '20 -> 19', 'classical': '4286 -> 4279'}
+- **Table 4.2 clustering metrics**: {'raw': {'silhouette': -0.298, 'calinski_harabasz': 5.1292, 'davies_bouldin': 9.8685}, 'classical': {'silhouette': -0.0851, 'calinski_harabasz': 5.5541, 'davies_bouldin': 5.0813}, 'ft_transformer': {'silhouette': -0.2791, 'calinski_harabasz': 5.2306, 'davies_bouldin': 7.9002}, 'subtab': {'silhouette': -0.1189, 'calinski_harabasz': 9.6989, 'davies_bouldin': 5.1436}, 'scarf': {'silhouette': -0.2649, 'calinski_harabasz': 3.7025, 'davies_bouldin': 8.8613}}
+- **Silhouette subsample variance (mean/std over 20 draws)**: {'raw': {'mean': -0.3881, 'std': 0.0353}, 'classical': {'mean': -0.0987, 'std': 0.0281}, 'ft_transformer': {'mean': -0.2829, 'std': 0.0399}, 'subtab': {'mean': -0.1217, 'std': 0.0139}, 'scarf': {'mean': -0.3206, 'std': 0.0493}}
+- **Standardisation scale-artefact check (raw silhouette, as-is vs standardised)**: {'as-is': -0.298, 'standardised': -0.2206}
+- **t-SNE params**: {'perplexity': 30, 'learning_rate': 200}
+- **Host regressor scores (r2/mae)**: {'raw': {'r2': 0.4346, 'mae': 0.6401}, 'classical': {'r2': 0.5068, 'mae': 0.5928}, 'ft_transformer': {'r2': 0.3217, 'mae': 0.682}, 'subtab': {'r2': 0.3127, 'mae': 0.6971}, 'scarf': {'r2': -0.0017, 'mae': 0.9207}}
+- **SHAP/LIME agreement (spearman/overlap_at_10)**: {'raw': {'spearman': 0.8831, 'overlap_at_10': 9}, 'classical': {'spearman': 0.2812, 'overlap_at_10': 7}, 'ft_transformer': {'spearman': 0.2973, 'overlap_at_10': 7}, 'subtab': {'spearman': 0.0946, 'overlap_at_10': 2}, 'scarf': {'spearman': 0.0372, 'overlap_at_10': 3}}
+- **Lowest SHAP/LIME agreement**: scarf -- disagreeing features: ['dim_107', 'dim_113', 'dim_248', 'dim_254', 'dim_88', 'dim_9']
+- **y_lang['test'] majority-class proportion**: 0.7755
+- **Recoverability/fairness (accuracy/macro_f1/delta_accuracy/delta_macro_f1)**: {'raw': {'accuracy': 0.8868, 'macro_f1': 0.5289, 'delta_accuracy': nan, 'delta_macro_f1': nan}, 'classical': {'accuracy': 0.9791, 'macro_f1': 0.9581, 'delta_accuracy': 0.0923, 'delta_macro_f1': 0.4293}, 'ft_transformer': {'accuracy': 0.9229, 'macro_f1': 0.727, 'delta_accuracy': 0.0362, 'delta_macro_f1': 0.1982}, 'subtab': {'accuracy': 0.9496, 'macro_f1': 0.8148, 'delta_accuracy': 0.0628, 'delta_macro_f1': 0.286}, 'scarf': {'accuracy': 0.7697, 'macro_f1': 0.1864, 'delta_accuracy': -0.117, 'delta_macro_f1': -0.3425}}
+- **release_year vs original_language (Kruskal-Wallis H/p)**: {'train': {'H': np.float64(433.72), 'p': np.float64(1.5903771193653252e-91)}, 'test': {'H': np.float64(95.04), 'p': np.float64(5.860728813995319e-19)}}
+- **Trade-off table (raw)**: {'raw': {'silhouette': -0.298, 'calinski_harabasz': 5.1292, 'davies_bouldin': 9.8685, 'agreement': 0.8831, 'delta_macro_f1': 0.0}, 'classical': {'silhouette': -0.0851, 'calinski_harabasz': 5.5541, 'davies_bouldin': 5.0813, 'agreement': 0.2812, 'delta_macro_f1': 0.4293}, 'ft_transformer': {'silhouette': -0.2791, 'calinski_harabasz': 5.2306, 'davies_bouldin': 7.9002, 'agreement': 0.2973, 'delta_macro_f1': 0.1982}, 'subtab': {'silhouette': -0.1189, 'calinski_harabasz': 9.6989, 'davies_bouldin': 5.1436, 'agreement': 0.0946, 'delta_macro_f1': 0.286}, 'scarf': {'silhouette': -0.2649, 'calinski_harabasz': 3.7025, 'davies_bouldin': 8.8613, 'agreement': 0.0372, 'delta_macro_f1': -0.3425}}
+- **Trade-off table (normalized)**: {'raw': {'silhouette': 0.0, 'calinski_harabasz': 0.2379, 'davies_bouldin': 0.0, 'agreement': 1.0, 'delta_macro_f1': 0.5562}, 'classical': {'silhouette': 1.0, 'calinski_harabasz': 0.3088, 'davies_bouldin': 1.0, 'agreement': 0.2884, 'delta_macro_f1': 0.0}, 'ft_transformer': {'silhouette': 0.0886, 'calinski_harabasz': 0.2548, 'davies_bouldin': 0.4112, 'agreement': 0.3075, 'delta_macro_f1': 0.2994}, 'subtab': {'silhouette': 0.8415, 'calinski_harabasz': 1.0, 'davies_bouldin': 0.987, 'agreement': 0.0679, 'delta_macro_f1': 0.1857}, 'scarf': {'silhouette': 0.1553, 'calinski_harabasz': 0.0, 'davies_bouldin': 0.2104, 'agreement': 0.0, 'delta_macro_f1': 1.0}}
+- **Saved outputs**: C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\clustering_metrics.csv, C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\raw_tradeoff_metrics.csv, C:\Users\knowu\Documents\Project-Repos\Dissertation\smart-tabular-embeddings\evaluation\normalized_tradeoff_metrics.csv
+
+Figures:
+- `reports/figures/06/06_tsne_grid.png`
+
+---
+
