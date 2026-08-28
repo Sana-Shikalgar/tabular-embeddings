@@ -33,12 +33,15 @@ for how to obtain the dataset locally.
 
 ## What's in This Branch
 
-A TMDB-only data pipeline, in six notebooks: characterizing the raw
-dataset, cleaning it, constructing and comparing candidate feature sets,
-producing two final train/val/test splits, encoding those splits into
-the shared per-type feature representations and baselines, and finally
-training and comparing three embedding paradigms (FT-Transformer, SubTab,
-SCARF) on top of those encoders. See "Notebook Run Order" below for how
+A TMDB-only data pipeline, in seven notebooks plus one extended variant:
+characterizing the raw dataset, cleaning it, constructing and comparing
+candidate feature sets, producing two final train/val/test splits,
+encoding those splits into the shared per-type feature representations
+and baselines, training and comparing three embedding paradigms
+(FT-Transformer, SubTab, SCARF) -- each also retrained text-free -- on
+top of those encoders, and finally evaluating all of those
+representations against each other on clustering quality,
+interpretability, and fairness. See "Notebook Run Order" below for how
 the notebooks depend on each other, and "Dataset Shapes" for what each
 stage produces.
 
@@ -112,13 +115,29 @@ must be run in order:
    parquet files under `models/<candidate>/`.
 6. **`05_embedding_paradigms.ipynb`** -- trains and compares three
    embedding paradigms (FT-Transformer, SubTab, SCARF) on top of `04`'s
-   fitted encoders -> each paradigm's `{train,val,test}.parquet`
-   embeddings (`id` first column) and `diagnostics/loss_curve.csv` under
-   `models/<candidate>/<paradigm>/`, with training-curve/diagnostic
-   figures under `reports/figures/05/`.
+   fitted encoders, plus a text-free retrain of each (`include_text=False`,
+   trained from scratch rather than masked at inference, since the
+   text-included tokenizer/encoder is structurally shaped around text
+   being present) -> each paradigm's `{train,val,test}.parquet` embeddings
+   (`id` first column) and `diagnostics/loss_curve.csv` under
+   `models/<candidate>/<paradigm>/` (and `<paradigm>_no_text/` for the
+   text-free retrains), with training-curve/diagnostic figures under
+   `reports/figures/05/`.
+7. **`06_evaluation_protocol.ipynb`** -- compares the five text-included
+   representations (`raw`, `classical`, `ft_transformer`, `subtab`,
+   `scarf`) on clustering quality (silhouette/Calinski-Harabasz/
+   Davies-Bouldin), t-SNE, interpretability (SHAP/LIME agreement), and
+   recoverability/fairness of `original_language`, then assembles a
+   normalised trade-off table across all three axes -> clustering/
+   trade-off CSVs under `evaluation/`, figures under
+   `reports/figures/06/`. **`06_extended_evaluation_protocol.ipynb`**
+   mirrors this same protocol over all eight representations, including
+   the three text-free variants -> its own `06_extend_`-prefixed CSVs
+   under `evaluation/` and figures under `reports/figures/06_extend/`.
 
 Notebooks `00`-`03` log a timestamped summary to `reports/eda_log.md`;
-`04` logs to its own `reports/feature_encoding_log.md`.
+`04` logs to its own `reports/feature_encoding_log.md`; `06` and
+`06_extended` both log to `reports/evaluation_protocol_log.md`.
 
 ## Shared Code
 
@@ -142,6 +161,12 @@ duplicating logic:
   training-curve diagnostics; trained and compared by
   `05_embedding_paradigms.ipynb`. `seeds.py`'s `set_global_seed()` seeds
   `random`/`numpy`/`torch` once at that notebook's start.
+- **`src/evaluation/`** -- `eval_setup.py` (shared representation/label
+  loading and row-alignment checks), `clustering_metrics.py`,
+  `tsne_viz.py`, `host_model.py`, `interpretability.py` (SHAP/LIME
+  agreement), `fairness.py` (recoverability probes), and `tradeoff.py`
+  (assembling and normalising the trade-off table); used by
+  `06_evaluation_protocol.ipynb` and `06_extended_evaluation_protocol.ipynb`.
 
 ## Development Notes
 
