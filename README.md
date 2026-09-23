@@ -1,6 +1,54 @@
 # smart-tabular-embeddings
 Creating Smart Embeddings for Complex Multi-Type Tabular Datasets
 
+## Table of Contents
+
+- [Results](#results)
+- [Environment Setup](#environment-setup)
+- [Data Sources & Licensing](#data-sources--licensing)
+- [Pipeline Overview](#pipeline-overview)
+- [Dataset Shapes](#dataset-shapes)
+- [Features](#features)
+- [Notebook Run Order](#notebook-run-order)
+- [Shared Code](#shared-code)
+- [Development Notes](#development-notes)
+- [License](#license)
+
+## Results
+
+`06_evaluation_protocol.ipynb` compares five representations of the same
+TMDB rows -- `raw`, `classical`, `ft_transformer`, `subtab`, `scarf` -- on
+three axes: clustering quality (silhouette / Calinski-Harabasz /
+Davies-Bouldin), interpretability (SHAP/LIME attribution agreement), and
+fairness (how much a classifier can recover `original_language` from the
+representation, `delta_macro_f1` -- lower is fairer). No single
+representation wins on all three:
+
+| Representation | Silhouette | Calinski-Harabasz | Davies-Bouldin | Interpretability agreement | Fairness (lower leakage) |
+|---|---:|---:|---:|---:|---:|
+| raw | 0.00 | 0.24 | 0.00 | **1.00** | 0.56 |
+| classical | **1.00** | 0.31 | **1.00** | 0.29 | 0.00 |
+| ft_transformer | 0.09 | 0.25 | 0.41 | 0.31 | 0.30 |
+| subtab | 0.84 | **1.00** | 0.99 | 0.07 | 0.19 |
+| scarf | 0.16 | 0.00 | 0.21 | 0.00 | **1.00** |
+
+Each column is min-max normalised to `[0, 1]` with `1.0` always the more
+favourable value (see `src/evaluation/tradeoff.py`); raw metric values are
+in `evaluation/raw_tradeoff_metrics.csv`. Reading across: `subtab` gives
+the best-separated clusters, `raw` keeps the most consistent SHAP/LIME
+attributions, and `scarf` leaks the least about `original_language`. One
+caveat that matters when reading this table: the host regressor used for
+the interpretability probe was fit on the same target `ft_transformer` was
+trained to predict, so `ft_transformer`'s numbers there have a structural
+head start that shouldn't be read as a general interpretability ranking
+(see `src/evaluation/host_model.py`).
+
+![Trade-off comparison across all three axes](reports/figures/06/06_tradeoff_parallel_coordinates.png)
+
+`06_extended_evaluation_protocol.ipynb` reruns this same protocol over all
+eight representations, adding text-free retrains of each embedding
+paradigm; its CSVs and figures live under the `06_extend_`-prefixed paths
+described in [Notebook Run Order](#notebook-run-order).
 
 ## Environment Setup
 
@@ -23,7 +71,7 @@ in `notebooks/`.
 
 ## Data Sources & Licensing
 
-This branch works with a single dataset:
+This pipeline works with a single dataset:
 
 - **Full TMDB Movies Dataset 2024 (1M Movies)** — sourced via Kaggle.
   Licensed under the [Open Data Commons Attribution License (ODC-By) v1.0](https://opendatacommons.org/licenses/by/1-0/index.html).
@@ -31,7 +79,7 @@ This branch works with a single dataset:
 Raw data files are not included in this repository. See `src/eda/loaders.py`
 for how to obtain the dataset locally.
 
-## What's in This Branch
+## Pipeline Overview
 
 A TMDB-only data pipeline, in seven notebooks plus one extended variant:
 characterizing the raw dataset, cleaning it, constructing and comparing
@@ -41,9 +89,9 @@ and baselines, training and comparing three embedding paradigms
 (FT-Transformer, SubTab, SCARF) -- each also retrained text-free -- on
 top of those encoders, and finally evaluating all of those
 representations against each other on clustering quality,
-interpretability, and fairness. See "Notebook Run Order" below for how
-the notebooks depend on each other, and "Dataset Shapes" for what each
-stage produces.
+interpretability, and fairness. See [Notebook Run Order](#notebook-run-order)
+below for how the notebooks depend on each other, and
+[Dataset Shapes](#dataset-shapes) for what each stage produces.
 
 ## Dataset Shapes
 
@@ -181,8 +229,10 @@ outputs from `.ipynb` files at commit time. This means:
 - `git diff` / commits only show code and markdown changes, not embedded
   image/output blobs, so notebook diffs stay readable.
 - If a GitHub view of a notebook looks like it's missing output cells,
-  that's expected — it's the last *committed* version, which never has
-  outputs baked in.
+  that's the default — unless that notebook was deliberately committed
+  with the filter disabled (see below), which is the case for the
+  `00`/`03`/`04`/`06`/`06_extended` notebooks as of this pipeline's final
+  polish, so they render with output on GitHub.
 
 If you want a specific notebook's outputs to actually go into a commit
 (e.g. so it renders with output on GitHub), you have two options:
@@ -195,3 +245,19 @@ If you want a specific notebook's outputs to actually go into a commit
   won't restore stripped output either, since stripping happens on the
   `git add`/commit path itself — uninstalling before committing is the
   reliable option.
+
+If `git add` still produces a stripped blob even after `nbstripout
+--uninstall` (confirm with `git config --get filter.nbstripout.clean`,
+which should return nothing), fall back to writing the blob directly and
+pointing the index at it, bypassing whatever is intercepting `git add`:
+
+```bash
+hash=$(git hash-object --path notebooks/<name>.ipynb -w --stdin < notebooks/<name>.ipynb)
+git update-index --cacheinfo 100644 "$hash" notebooks/<name>.ipynb
+```
+
+## License
+
+[MIT](LICENSE) © Sana-Shikalgar. Note this covers the code only — the
+TMDB dataset itself is licensed separately under ODC-By v1.0, see
+[Data Sources & Licensing](#data-sources--licensing).
